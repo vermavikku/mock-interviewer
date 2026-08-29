@@ -1,0 +1,157 @@
+name: mock-interviewer
+
+services:
+  # =========================================================================
+  # 1. Redis Cache & Job Broker (BullMQ Queue Processing)
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: mock-interviewer-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mock-interviewer-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # 2. MongoDB Document Store (Image Processing & OCR Metadata)
+  # =========================================================================
+  mongodb:
+    image: mongo:7.0
+    container_name: mock-interviewer-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mock-interviewer-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # 3. Image Processing Microservice (MuPDF WASM + Sharp Engine)
+  # =========================================================================
+  image-processing:
+    build:
+      context: ./image-processing
+      dockerfile: Dockerfile
+    container_name: mock-interviewer-image-proc
+    restart: unless-stopped
+    env_file:
+      - ./image-processing/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/mock-interviewer
+    ports:
+      - "3000:3000"
+    volumes:
+      - image_uploads:/app/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - mock-interviewer-net
+
+  # =========================================================================
+  # 4. OCR Microservice (Tesseract.js Engine + Fast Extractor)
+  # =========================================================================
+  ocr:
+    build:
+      context: ./ocr
+      dockerfile: Dockerfile
+    container_name: mock-interviewer-ocr
+    restart: unless-stopped
+    env_file:
+      - ./ocr/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGO_URI=mongodb://mongodb:27017/mock-interviewer
+    ports:
+      - "3001:3001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - mock-interviewer-net
+
+  # =========================================================================
+  # 5. Backend Gateway & AI Orchestrator (NestJS + Prisma + BullMQ)
+  # =========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mock-interviewer-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - IMAGE_PROCESSING_URL=http://image-processing:3000
+      - OCR_SERVICE_URL=http://ocr:3001
+    ports:
+      - "5000:5000"
+    volumes:
+      - backend_storage:/app/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+      image-processing:
+        condition: service_started
+      ocr:
+        condition: service_started
+    networks:
+      - mock-interviewer-net
+
+  # =========================================================================
+  # 6. Frontend SPA (Vite + React 19 + Nginx Alpine)
+  # =========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_BACKEND_URL=http://localhost:5000
+    container_name: mock-interviewer-frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - mock-interviewer-net
+
+# =========================================================================
+# Networks & Persistent Volumes
+# =========================================================================
+networks:
+  mock-interviewer-net:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  mongo_data:
+    driver: local
+  image_uploads:
+    driver: local
+  backend_storage:
+    driver: local

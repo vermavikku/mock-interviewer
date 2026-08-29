@@ -1,8 +1,11 @@
 node_modules
+dist
 .env
 .git
 .gitignore
-uploads/documents/*
+storage/uploads/*
+storage/sessions/*
+storage/converted_images/*
 logs/*
 npm-debug.log*
 yarn-debug.log*

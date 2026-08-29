@@ -1,10 +1,10 @@
 node_modules
-logs
+.env
 .git
 .gitignore
-.env
-.env.local
-*.log
+logs/*
 npm-debug.log*
-test*.js
-scratch
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
