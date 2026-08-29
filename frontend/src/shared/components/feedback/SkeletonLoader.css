@@ -1,0 +1,39 @@
+.skeleton-box {
+  background: var(--bg-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.skeleton-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.skeleton-body-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .skeleton-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .skeleton-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .skeleton-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

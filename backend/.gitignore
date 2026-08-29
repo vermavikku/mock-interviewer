@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/sessions/*
+!storage/sessions/.gitkeep
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log

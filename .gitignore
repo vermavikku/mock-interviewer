@@ -1,0 +1,85 @@
+# ==============================================================================
+# Root .gitignore for Mock Interviewer Platform
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Secret Credentials
+# ------------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+**/.env.local
+!**/.env.example
+
+# ------------------------------------------------------------------------------
+# 2. Dependency Directories
+# ------------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
+# ------------------------------------------------------------------------------
+# 3. Session JSON Storage, Uploaded Resumes & Converted Page Images
+# ------------------------------------------------------------------------------
+# Backend session storage
+backend/storage/sessions/*
+!backend/storage/sessions/.gitkeep
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
+backend/storage/converted_images/*
+!backend/storage/converted_images/.gitkeep
+
+# Generic storage & uploads across all services
+**/storage/sessions/*
+!**/storage/sessions/.gitkeep
+**/storage/uploads/*
+!**/storage/uploads/.gitkeep
+**/storage/converted_images/*
+!**/storage/converted_images/.gitkeep
+**/uploads/*
+!**/uploads/.gitkeep
+
+# Tesseract trained data binaries (optional heavy files)
+# eng.traineddata
+
+# ------------------------------------------------------------------------------
+# 4. Build Artifacts & Compiled Bundles
+# ------------------------------------------------------------------------------
+dist/
+**/dist/
+build/
+**/build/
+.next/
+out/
+.vercel
+.turbo
+
+# ------------------------------------------------------------------------------
+# 5. Logs, Diagnostics & Cache
+# ------------------------------------------------------------------------------
+logs/
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.eslintcache
+
+# ------------------------------------------------------------------------------
+# 6. Operating System & IDE Artifacts
+# ------------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.sublime-project
+*.sublime-workspace

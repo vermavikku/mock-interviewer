@@ -1,0 +1,38 @@
+.app-shell {
+  display: flex;
+  height: 100vh;
+  max-height: 100vh;
+  background-color: var(--bg-app);
+  position: relative;
+  overflow: hidden;
+}
+
+.app-main-content {
+  flex: 1;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--bg-app);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.app-page-container {
+  flex: 1;
+  padding: 32px;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+}
+
+@media (max-width: 900px) {
+  .app-page-container {
+    padding: 20px 16px;
+  }
+}

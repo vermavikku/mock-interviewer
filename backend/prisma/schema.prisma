@@ -1,0 +1,69 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String             @id @default(uuid())
+  email          String?            @map("email")
+  username       String             @unique
+  password       String             // Bcrypt hashed password
+  firstName      String?            @map("first_name")
+  lastName       String?            @map("last_name")
+  targetRole     String?            @default("Full Stack Engineer") @map("target_role")
+  seniorityLevel String?            @default("Senior") @map("seniority_level")
+  avatarUrl      String?            @map("avatar_url")
+  bio            String?            @db.Text
+  role           String             @default("CANDIDATE")
+  tokenVersion   Int                @default(0) @map("token_version") // Incremented on logout/password change to revoke all active tokens
+  
+  // Relations
+  sessions       InterviewSession[]
+
+  // Timestamps
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model InterviewSession {
+  id                 String    @id @default(uuid())
+  title              String?
+  targetRole         String    @map("target_role")
+  seniorityLevel     String    @default("Senior") @map("seniority_level")
+  difficulty         String    @default("Medium")
+  interviewType      String    @default("Technical") @map("interview_type")
+  targetDurationMin  Int       @default(30) @map("target_duration_min")
+  status             String    @default("PENDING") // PENDING, CONVERTING_DOC, EXTRACTING_OCR, GENERATING_QUESTIONS, READY, IN_PROGRESS, COMPLETED, FAILED
+  
+  // File & Storage References
+  originalFileName   String    @map("original_file_name")
+  mimeType           String    @map("mime_type")
+  storedFilePath     String    @map("stored_file_path")
+  sessionJsonPath    String    @map("session_json_path") // Path to storage/sessions/<sessionId>.json
+  
+  // Extracted Data Snapshot
+  rawExtractedText   String?   @map("raw_extracted_text") @db.Text
+  totalScore         Float?    @map("total_score")
+  bullJobId          String?   @map("bull_job_id")
+  errorMessage       String?   @map("error_message") @db.Text
+  
+  // User Association (optional)
+  userId             String?   @map("user_id")
+  user               User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Timestamps
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  completedAt        DateTime? @map("completed_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
+  @@map("interview_sessions")
+}
