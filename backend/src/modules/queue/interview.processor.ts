@@ -9,6 +9,7 @@ import { SessionJsonService } from '../session-storage/session-json.service';
 import { ImageProcessingClient } from '../microservices/image-processing.client';
 import { OcrClient } from '../microservices/ocr.client';
 import { AiGeneratorService } from '../ai/ai-generator.service';
+import { getErrorMessage, getErrorStack } from '../../shared/utils/error.util';
 
 @Processor(INTERVIEW_RESUME_QUEUE)
 export class InterviewProcessor extends WorkerHost {
@@ -25,7 +26,7 @@ export class InterviewProcessor extends WorkerHost {
   }
 
   async process(job: Job<ResumePipelineJobData, any, string>): Promise<any> {
-    const { sessionId, storedFilePath, originalFileName, mimeType, targetRole, seniorityLevel, difficulty, interviewType } =
+    const { sessionId, storedFilePath, originalFileName, mimeType, targetRole, seniorityLevel, difficulty, interviewType, targetDurationMin } =
       job.data;
 
     this.logger.log(`[Job ${job.id}] Starting resume processing pipeline for Session: ${sessionId}`);
@@ -149,6 +150,7 @@ export class InterviewProcessor extends WorkerHost {
         difficulty,
         interviewType,
         questionCount: 5,
+        targetDurationMin,
       });
 
       await this.sessionJsonService.updateSession(sessionId, (doc) => {
@@ -183,18 +185,18 @@ export class InterviewProcessor extends WorkerHost {
         questionsCount: generatedQuestions.length,
       };
     } catch (error) {
-      this.logger.error(`[Job ${job.id}] Pipeline failed for Session ${sessionId}: ${error.message}`, error.stack);
+      this.logger.error(`[Job ${job.id}] Pipeline failed for Session ${sessionId}: ${getErrorMessage(error)}`, getErrorStack(error));
 
       await this.prisma.interviewSession.update({
         where: { id: sessionId },
-        data: { status: 'FAILED', errorMessage: error.message },
+        data: { status: 'FAILED', errorMessage: getErrorMessage(error) },
       });
 
       await this.sessionJsonService.logPipelineStep(
         sessionId,
         'PIPELINE_FAILED',
         'failed',
-        `Error: ${error.message}`,
+        `Error: ${getErrorMessage(error)}`,
       );
 
       throw error;

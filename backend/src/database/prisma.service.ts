@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { getErrorMessage } from '../shared/utils/error.util';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -10,7 +11,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       await this.$connect();
       this.logger.log('Connected to PostgreSQL via Prisma successfully');
     } catch (err) {
-      this.logger.error(`Prisma connection error: ${err.message}`);
+      this.logger.error(`Prisma connection error: ${getErrorMessage(err)}`);
     }
   }
 

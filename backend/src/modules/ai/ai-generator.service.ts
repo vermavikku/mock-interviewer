@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { GoogleGenAI } from '@google/genai';
 import { SessionQuestion, SessionEvaluation } from '../session-storage/session-json.service';
+import { getErrorMessage } from '../../shared/utils/error.util';
+import { parseAiJson } from '../../shared/utils/json.util';
 
 @Injectable()
 export class AiGeneratorService {
@@ -20,7 +22,7 @@ export class AiGeneratorService {
         this.aiClient = new GoogleGenAI({ apiKey: this.apiKey });
         this.logger.log(`Initialized Google AI Studio Gemini client with model: ${this.modelName}`);
       } catch (err) {
-        this.logger.warn(`Failed to initialize GoogleGenAI client: ${err.message}`);
+        this.logger.warn(`Failed to initialize GoogleGenAI client: ${getErrorMessage(err)}`);
       }
     }
   }
@@ -36,8 +38,24 @@ export class AiGeneratorService {
     difficulty: string;
     interviewType: string;
     questionCount?: number;
+    targetDurationMin?: number;
   }): Promise<SessionQuestion[]> {
-    const count = params.questionCount || 5;
+    const isTechnical = params.interviewType.toLowerCase().includes('tech');
+
+    // Coding Track: for Technical rounds where the resume shows coding
+    // experience, the question count is derived from the interview duration
+    // (15min -> 2, 30min -> 4, 45min -> 6, 60min -> 8) and every question is
+    // a hands-on coding challenge rendered in the interview room IDE.
+    const codingTrack = isTechnical && this.hasCodingExperience(params.rawResumeText);
+    const count = codingTrack
+      ? this.computeCodingCount(params.targetDurationMin)
+      : params.questionCount || 5;
+
+    if (codingTrack) {
+      this.logger.log(
+        `🧑‍💻 [Coding Track] Resume shows coding experience — generating ${count} live coding challenges for a ${params.targetDurationMin || 30} min Technical interview`,
+      );
+    }
 
     if (!this.apiKey) {
       throw new Error(
@@ -46,13 +64,42 @@ export class AiGeneratorService {
     }
 
     this.logger.log(`🤖 [Direct AI Call] Calling Google Gemini (${this.modelName}) to generate questions...`);
-    const geminiQuestions = await this.generateWithGemini(params, count);
+    const geminiQuestions = await this.generateWithGemini(params, count, codingTrack);
     this.logger.log(`🤖 [Google Gemini AI] Successfully generated ${geminiQuestions.length} tailored questions using model "${this.modelName}"`);
     return geminiQuestions;
 
     /* --- FALLBACK DISABLED FOR TESTING ---
     return this.generateLocally(params, count);
     ---------------------------------------- */
+  }
+
+  /**
+   * Detects whether the resume mentions coding-related experience
+   * (programming languages, frameworks, or engineering roles).
+   */
+  private hasCodingExperience(rawResumeText: string): boolean {
+    if (!rawResumeText) return false;
+
+    const codingKeywords = [
+      'javascript', 'typescript', 'python', 'java', 'golang', ' go ', 'c++', 'c#', 'ruby', 'php',
+      'kotlin', 'swift', 'rust', 'scala', 'sql', 'nosql', 'node', 'react', 'angular', 'vue',
+      'next.js', 'express', 'django', 'flask', 'spring', '.net', 'laravel', 'rails',
+      'developer', 'engineer', 'programming', 'coding', 'software', 'backend', 'frontend',
+      'full stack', 'full-stack', 'devops', 'data structures', 'algorithms', 'api',
+    ];
+
+    const haystack = ` ${rawResumeText.toLowerCase().replace(/\s+/g, ' ')} `;
+    return codingKeywords.some((kw) => haystack.includes(kw));
+  }
+
+  /**
+   * Maps the target interview duration to the number of live coding questions:
+   * 15 min -> 2, 30 min -> 4, 45 min -> 6, 60 min -> 8 (~7.5 min per question).
+   */
+  private computeCodingCount(targetDurationMin?: number): number {
+    const durationMap: Record<number, number> = { 15: 2, 30: 4, 45: 6, 60: 8 };
+    const duration = Number(targetDurationMin) || 30;
+    return durationMap[duration] ?? Math.min(8, Math.max(1, Math.round(duration / 7.5)));
   }
 
   private async generateWithGemini(
@@ -64,8 +111,15 @@ export class AiGeneratorService {
       interviewType: string;
     },
     count: number,
+    codingTrack = false,
   ): Promise<SessionQuestion[]> {
     const isTechnical = params.interviewType.toLowerCase().includes('tech');
+
+    const codingInstruction = codingTrack
+      ? `3. LIVE CODING ROUND: The candidate's resume confirms hands-on coding experience, so ALL ${count} questions must be practical, hands-on CODING CHALLENGE questions ("isCoding": true) tailored to their primary programming language from the resume. Space the challenges so they fit a ~${Math.round(count * 7.5)} minute round (roughly 7-8 minutes per challenge, ascending difficulty). For every question provide "codingDetails" with "language", "starterCode" (a clean function signature scaffold with JSDoc comments), "testCases" (at least 3, including edge cases), and "idealSolutionCode" (an optimal, well-commented reference solution). Use the schema shown for the second (coding) object for EVERY entry in the array.`
+      : isTechnical
+        ? `3. For this Technical interview: Include 1 or 2 practical, hands-on CODING CHALLENGE questions (with "isCoding": true) tailored to their primary programming language from the resume. For coding challenges, provide "codingDetails" with "language", "starterCode", "testCases", and "idealSolutionCode". For conceptual/architectural questions, set "isCoding": false.`
+        : `3. For non-technical questions, set "isCoding": false.`;
 
     const prompt = `
 You are an expert technical bar-raiser hiring manager conducting a ${params.seniorityLevel} level ${params.interviewType} interview for the position of "${params.targetRole}" (Difficulty: ${params.difficulty}).
@@ -75,10 +129,12 @@ Candidate Resume Extract:
 ${params.rawResumeText.slice(0, 8000)}
 """
 
+JSON-SAFETY REQUIREMENT (CRITICAL): All code strings ("starterCode", "idealSolutionCode", "testCases") MUST be single-line escaped JSON strings — escape every quote (\\"), backslash (\\\\), regex backslash (\\\\s -> \\\\\\\\s), and use \\n for newlines. Never emit raw newlines, tabs, or unescaped backslashes inside string values.
+
 Instructions:
 1. Examine the candidate's resume for their primary programming languages (e.g. JavaScript, TypeScript, Python, Java, Go, C++, SQL, C#) and technical domain experience.
 2. Generate exactly ${count} relevant, tailored interview questions.
-${isTechnical ? `3. For this Technical interview: Include 1 or 2 practical, hands-on CODING CHALLENGE questions (with "isCoding": true) tailored to their primary programming language from the resume. For coding challenges, provide "codingDetails" with "language", "starterCode", "testCases", and "idealSolutionCode". For conceptual/architectural questions, set "isCoding": false.` : '3. For non-technical questions, set "isCoding": false.'}
+${codingInstruction}
 4. For EACH question, provide a comprehensive, best-practice "idealAnswer" that an elite candidate would deliver.
 
 Respond ONLY with a valid JSON array of objects with the following schema:
@@ -148,20 +204,9 @@ Respond ONLY with a valid JSON array of objects with the following schema:
     let parsed: any;
     let cleanJson = rawResponseText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
 
-    // Resilient JSON array extraction
-    const firstBracket = cleanJson.indexOf('[');
-    const lastBracket = cleanJson.lastIndexOf(']');
-    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-      cleanJson = cleanJson.substring(firstBracket, lastBracket + 1);
-    }
-
-    try {
-      parsed = JSON.parse(cleanJson);
-    } catch (parseErr) {
-      // Clean possible control character or escaping errors
-      const sanitized = cleanJson.replace(/[\u0000-\u001F]+/g, (m) => (m === '\n' || m === '\r' ? '\\n' : ''));
-      parsed = JSON.parse(sanitized);
-    }
+    // Resilient JSON parsing: handles markdown fences, stray backslashes,
+    // invalid escapes from code/regex content, and raw control characters.
+    parsed = parseAiJson(cleanJson);
 
     const questionsArray = Array.isArray(parsed) ? parsed : parsed.questions || [];
 
@@ -367,7 +412,7 @@ Respond ONLY in valid JSON format:
     }
 
     const cleanJson = rawResponseText.replace(/^```json/i, '').replace(/```$/i, '').trim();
-    const parsed = JSON.parse(cleanJson);
+    const parsed = parseAiJson<{ score?: number; feedback?: string }>(cleanJson);
     return {
       score: Math.min(100, Math.max(0, Number(parsed.score) || 0)),
       feedback: parsed.feedback || 'Answer evaluated based on technical depth and key criteria.',

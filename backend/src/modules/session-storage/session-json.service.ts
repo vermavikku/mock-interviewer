@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { getErrorMessage } from '../../shared/utils/error.util';
 
 export interface SessionResumeData {
   originalFileName: string;
@@ -106,7 +107,7 @@ export class SessionJsonService {
     try {
       await fs.mkdir(this.sessionsDir, { recursive: true });
     } catch (err) {
-      this.logger.error(`Failed to create sessions directory: ${err.message}`);
+      this.logger.error(`Failed to create sessions directory: ${getErrorMessage(err)}`);
     }
   }
 

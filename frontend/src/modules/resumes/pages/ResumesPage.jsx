@@ -39,6 +39,7 @@ export function ResumesPage() {
   const [showUploadBox, setShowUploadBox] = useState(false);
   const [targetRoleInput, setTargetRoleInput] = useState('Full Stack Engineer');
   const [resumeToDelete, setResumeToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -122,6 +123,7 @@ export function ResumesPage() {
 
   const handleConfirmDelete = async () => {
     if (!resumeToDelete) return;
+    setDeleting(true);
     try {
       await api.deleteSession(resumeToDelete.sessionId);
       setResumes((prev) => prev.filter((r) => r.sessionId !== resumeToDelete.sessionId));
@@ -130,6 +132,7 @@ export function ResumesPage() {
       toast.error('Failed to delete resume file');
     } finally {
       setResumeToDelete(null);
+      setDeleting(false);
     }
   };
 
@@ -344,6 +347,7 @@ export function ResumesPage() {
         confirmLabel="Delete Resume"
         variant="danger"
         icon={Trash2}
+        isLoading={deleting}
       />
     </PageWrapper>
   );

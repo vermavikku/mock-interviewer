@@ -42,6 +42,47 @@ export function InterviewRoomPage() {
 
   // Initialize session safely and trigger fullscreen
   useEffect(() => {
+    let cancelled = false;
+
+    // Small delay helper for the staged AI intro
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    // Appends an AI bubble and types its text out progressively for a natural,
+    // non-flashing reveal. Aborts silently if the effect was cleaned up
+    // (reads `cancelled` from this effect's closure, so it always sees the
+    // latest value after StrictMode double-mount cleanup).
+    const typeOutMessage = (id, category, fullText) =>
+      new Promise((resolve) => {
+        if (cancelled) return resolve();
+
+        soundEffects.playPop();
+        setMessages((prev) => [
+          ...prev,
+          { id, sender: 'ai', text: '', timestamp: new Date().toISOString(), category },
+        ]);
+
+        // Cap total typing time (~1.4s) regardless of text length
+        const tickCount = 70;
+        const step = Math.max(1, Math.ceil(fullText.length / tickCount));
+        const speed = Math.max(8, Math.round(1400 / tickCount));
+        let i = 0;
+
+        const interval = setInterval(() => {
+          if (cancelled) {
+            clearInterval(interval);
+            return resolve();
+          }
+          i = Math.min(fullText.length, i + step);
+          const partial = fullText.slice(0, i);
+          setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text: partial } : m)));
+
+          if (i >= fullText.length) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, speed);
+      });
+
     async function setupRoom() {
       try {
         setLoadingSession(true);
@@ -106,47 +147,50 @@ export function InterviewRoomPage() {
         const questionsList = active?.questions || [];
         const firstQ = questionsList[0];
 
-        // Step 1: Deliver greeting introduction in real-time
-        setTimeout(() => {
-          soundEffects.playPop();
-          setMessages([
-            {
-              id: 'msg_ai_init',
-              sender: 'ai',
-              text: `Hello, and welcome to your ${active?.config?.level || 'Senior'} ${active?.config?.type || 'Technical'} interview session! I'm Alex, your AI interviewer. I'll be evaluating your system knowledge, architecture decisions, and problem-solving depth. Let's begin!`,
-              timestamp: new Date().toISOString(),
-              category: 'Session Kickoff',
-            },
-          ]);
+        const greetingText = `Hello, and welcome to your ${active?.config?.level || 'Senior'} ${active?.config?.type || 'Technical'} interview session! I'm Alex, your AI interviewer. I'll be evaluating your system knowledge, architecture decisions, and problem-solving depth. Let's begin!`;
 
-          // Step 2: Deliver Question 1 after greeting and then enable user input
-          if (firstQ) {
-            setTimeout(() => {
-              soundEffects.playPop();
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `msg_ai_q_${firstQ.id || '1'}`,
-                  sender: 'ai',
-                  text: firstQ.question,
-                  timestamp: new Date().toISOString(),
-                  category: firstQ.category || 'General',
-                },
-              ]);
-              setAiStatus('Listening'); // Inputs now enabled for the candidate!
-            }, 1400);
-          } else {
-            setAiStatus('Listening');
-          }
-        }, 600);
+        // Sequential, typewriter-style AI reveal so the greeting and Question 1
+        // appear smoothly instead of flashing in back-to-back.
+        await wait(600);
+        if (cancelled) return;
+        await typeOutMessage('msg_ai_init', 'Session Kickoff', greetingText);
+        if (cancelled) return;
+
+        // Natural pause: Alex "formulates" the first question
+        setAiStatus('Thinking');
+        await wait(1000);
+        if (cancelled) return;
+        setAiStatus('Asking');
+
+        if (firstQ) {
+          // Unique message id (question ids are not guaranteed unique across flows)
+          await typeOutMessage(
+            `msg_ai_q_${firstQ.id || 'q1'}_${Date.now()}`,
+            firstQ.category || 'General',
+            firstQ.question,
+          );
+          if (cancelled) return;
+        }
+
+        setAiStatus('Listening'); // Inputs now enabled for the candidate!
       } catch (err) {
         console.error('Failed to setup interview room:', err);
+        setAiStatus('Listening');
       } finally {
-        setLoadingSession(false);
+        if (!cancelled) {
+          setLoadingSession(false);
+        }
       }
     }
 
     setupRoom();
+
+    // Cancel any in-flight intro timers if the effect re-runs / unmounts
+    // (React StrictMode double-invokes effects in development, which was the
+    // root cause of Question 1 being appended twice).
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const currentQ = session?.questions?.[currentQuestionIndex];

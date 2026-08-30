@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as FormData from 'form-data';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getErrorMessage, getErrorStack } from '../../shared/utils/error.util';
 
 export interface OcrImageResult {
   id: string;
@@ -80,7 +81,7 @@ export class OcrClient {
 
       throw new Error(response.data?.message || 'Failed to extract text in OCR microservice');
     } catch (err) {
-      this.logger.error(`Error calling OCR microservice: ${err.message}`, err.stack);
+      this.logger.error(`Error calling OCR microservice: ${getErrorMessage(err)}`, getErrorStack(err));
       throw err;
     }
   }

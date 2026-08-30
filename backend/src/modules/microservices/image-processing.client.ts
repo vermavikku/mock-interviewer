@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as FormData from 'form-data';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getErrorMessage, getErrorStack } from '../../shared/utils/error.util';
 
 export interface ConvertedImageMap {
   documentId: string;
@@ -59,7 +60,7 @@ export class ImageProcessingClient {
 
       throw new Error(response.data?.message || 'Failed to convert document in image-processing microservice');
     } catch (err) {
-      this.logger.error(`Error calling image-processing microservice: ${err.message}`, err.stack);
+      this.logger.error(`Error calling image-processing microservice: ${getErrorMessage(err)}`, getErrorStack(err));
       throw err;
     }
   }

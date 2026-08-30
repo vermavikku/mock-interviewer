@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   User,
   Mail,
@@ -28,6 +29,7 @@ import { formatDate } from '../../../shared/utils/formatters';
 import './ProfilePage.css';
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const { user, updateProfile, changePassword, logout, refreshProfile } = useAuth();
   const toast = useToast();
 
@@ -35,6 +37,7 @@ export function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPass, setIsChangingPass] = useState(false);
   const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [revoking, setRevoking] = useState(false);
 
   // Profile Edit Form State
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -114,12 +117,18 @@ export function ProfilePage() {
   };
 
   const handleRevokeAllSessions = async () => {
-    setShowRevokeModal(false);
+    // Keep the modal open and spin the red button until revocation completes
+    setRevoking(true);
     try {
       await logout();
       toast.success('All sessions have been revoked. Please sign in again.');
+      setShowRevokeModal(false);
+      navigate('/login');
     } catch (err) {
       toast.error('Session revocation error');
+      setShowRevokeModal(false);
+    } finally {
+      setRevoking(false);
     }
   };
 
@@ -469,6 +478,7 @@ export function ProfilePage() {
         cancelLabel="Cancel"
         variant="danger"
         icon={LogOut}
+        isLoading={revoking}
       />
     </PageWrapper>
   );

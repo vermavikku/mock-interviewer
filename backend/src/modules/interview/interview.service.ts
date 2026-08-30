@@ -12,6 +12,7 @@ import { INTERVIEW_RESUME_QUEUE, JOB_PROCESS_RESUME, ResumePipelineJobData } fro
 import { CreateSessionDto, CreateSampleSessionDto, ReuseResumeDto } from './dto/create-session.dto';
 import { SubmitAnswerDto } from './dto/submit-answer.dto';
 import { CompleteSessionDto } from './dto/complete-session.dto';
+import { getErrorMessage } from '../../shared/utils/error.util';
 
 @Injectable()
 export class InterviewService {
@@ -31,7 +32,7 @@ export class InterviewService {
     try {
       await fs.mkdir(this.uploadsDir, { recursive: true });
     } catch (err) {
-      this.logger.error(`Failed to create uploads directory: ${err.message}`);
+      this.logger.error(`Failed to create uploads directory: ${getErrorMessage(err)}`);
     }
   }
 
@@ -154,7 +155,7 @@ export class InterviewService {
         await fs.copyFile(oldAbsoluteFilePath, newStoredFilePath);
       }
     } catch (err) {
-      this.logger.warn(`Could not copy physical file: ${err.message}`);
+      this.logger.warn(`Could not copy physical file: ${getErrorMessage(err)}`);
     }
 
     const relativeStoredFilePath = path.join('storage', 'uploads', newStoredFileName);
@@ -183,6 +184,7 @@ export class InterviewService {
         difficulty: dto.difficulty || 'Medium',
         interviewType: dto.interviewType || 'Technical',
         questionCount: 5,
+        targetDurationMin: dto.targetDurationMin || 30,
       });
 
       const updatedDoc = await this.sessionJsonService.updateSession(sessionId, (doc) => {
@@ -393,6 +395,7 @@ export class InterviewService {
       difficulty: dto.difficulty || 'Medium',
       interviewType: dto.interviewType || 'Technical',
       questionCount: 5,
+      targetDurationMin: dto.targetDurationMin || 30,
     });
 
     // Update Session JSON
@@ -451,7 +454,7 @@ export class InterviewService {
     try {
       jsonDocument = await this.sessionJsonService.readSession(sessionId);
     } catch (err) {
-      this.logger.warn(`Could not read session JSON for ${sessionId}: ${err.message}`);
+      this.logger.warn(`Could not read session JSON for ${sessionId}: ${getErrorMessage(err)}`);
     }
 
     return {

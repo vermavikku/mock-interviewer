@@ -21,6 +21,7 @@ export function HistoryListPage() {
   const [sortBy, setSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionToDelete, setSessionToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const filteredInterviews = useMemo(() => {
     let list = [...(interviews || [])];
@@ -66,9 +67,14 @@ export function HistoryListPage() {
   const handleConfirmDelete = async () => {
     if (!sessionToDelete) return;
     const { id, title } = sessionToDelete;
-    await deleteInterview(id);
-    toast.info(`Deleted session: "${title}"`);
-    setSessionToDelete(null);
+    setDeleting(true);
+    try {
+      await deleteInterview(id);
+      toast.info(`Deleted session: "${title}"`);
+      setSessionToDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleDeleteClick = (e, item) => {
@@ -185,6 +191,7 @@ export function HistoryListPage() {
         confirmLabel="Delete Session"
         variant="danger"
         icon={Trash2}
+        isLoading={deleting}
       />
     </PageWrapper>
   );
