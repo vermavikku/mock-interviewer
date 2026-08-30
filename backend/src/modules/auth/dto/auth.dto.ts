@@ -53,6 +53,11 @@ export class LoginDto {
 }
 
 export class UpdateProfileDto {
+  @ApiPropertyOptional({ description: 'Full display name', example: 'Alex Vance' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @ApiPropertyOptional({ description: 'First name', example: 'Alex' })
   @IsOptional()
   @IsString()
@@ -62,6 +67,11 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   lastName?: string;
+
+  @ApiPropertyOptional({ description: 'Engineering role alias', example: 'Software Engineer' })
+  @IsOptional()
+  @IsString()
+  role?: string;
 
   @ApiPropertyOptional({ description: 'Target engineering role', example: 'Staff Infrastructure Architect' })
   @IsOptional()

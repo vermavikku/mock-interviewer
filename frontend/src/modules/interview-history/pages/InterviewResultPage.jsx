@@ -116,8 +116,14 @@ export function InterviewResultPage() {
               category: q.category || payload.interviewType,
               difficulty: q.difficulty || payload.difficulty,
               userAnswer: q.userAnswer || 'Answer submitted and reviewed by AI evaluator.',
-              feedback: q.aiFeedback || 'Clear structure and technical accuracy demonstrated.',
-              score: q.score || 85,
+              feedback: q.aiFeedback || q.feedback || 'Clear structure and technical accuracy demonstrated.',
+              score: typeof q.score === 'number' ? q.score : 85,
+              expectedKeyPoints: q.expectedKeyPoints || [],
+              idealAnswer: q.idealAnswer || '',
+              isCoding: q.isCoding || false,
+              codingDetails: q.codingDetails || undefined,
+              code: q.code,
+              language: q.language || q.codingDetails?.language,
             })),
           };
 
@@ -370,6 +376,8 @@ export function InterviewResultPage() {
             {questionsList.map((q, idx) => {
               const qScore = typeof q.score === 'number' ? q.score : 0;
               const isSkipped = qScore === 0 || q.userAnswer?.includes('[Skipped');
+              const isCodingTask = q.isCoding || Boolean(q.code) || Boolean(q.codingDetails);
+              const idealCode = q.codingDetails?.idealSolutionCode;
 
               return (
                 <div
@@ -388,8 +396,8 @@ export function InterviewResultPage() {
                           width: 24,
                           height: 24,
                           borderRadius: '50%',
-                          background: isSkipped ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                          color: isSkipped ? '#f87171' : '#818cf8',
+                          background: isSkipped ? 'rgba(239, 68, 68, 0.2)' : isCodingTask ? 'rgba(6, 182, 212, 0.2)' : 'rgba(99, 102, 241, 0.2)',
+                          color: isSkipped ? '#f87171' : isCodingTask ? '#22d3ee' : '#818cf8',
                           fontSize: 12,
                           fontWeight: 700,
                           display: 'flex',
@@ -400,9 +408,32 @@ export function InterviewResultPage() {
                       >
                         {idx + 1}
                       </span>
-                      <h4 style={{ margin: 0, fontSize: 15.5, fontWeight: 600, color: '#f8fafc', lineHeight: 1.4 }}>
-                        {q.question}
-                      </h4>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: 15.5, fontWeight: 600, color: '#f8fafc', lineHeight: 1.4 }}>
+                          {q.question}
+                        </h4>
+                        {isCodingTask && (
+                          <span
+                            style={{
+                              fontSize: 10.5,
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                              padding: '2px 8px',
+                              borderRadius: 4,
+                              background: 'rgba(6, 182, 212, 0.15)',
+                              color: '#22d3ee',
+                              border: '1px solid rgba(6, 182, 212, 0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              marginTop: 6,
+                            }}
+                          >
+                            <FileText size={11} /> Coding Challenge
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <Badge
                       variant={isSkipped ? 'danger' : qScore >= 80 ? 'success' : qScore >= 60 ? 'primary' : 'warning'}
@@ -412,12 +443,25 @@ export function InterviewResultPage() {
                     </Badge>
                   </div>
 
-                  {/* Candidate Answer */}
-                  <div style={{ margin: '10px 0 12px 34px', background: 'rgba(0, 0, 0, 0.35)', padding: '12px 14px', borderRadius: 8, fontSize: 13, color: isSkipped ? '#94a3b8' : '#cbd5e1', lineHeight: 1.5, borderLeft: isSkipped ? '3px solid #ef4444' : '3px solid #6366f1' }}>
+                  {/* Candidate Answer / Code */}
+                  <div style={{ margin: '10px 0 12px 34px', background: 'rgba(0, 0, 0, 0.35)', padding: '12px 14px', borderRadius: 8, fontSize: 13, color: isSkipped ? '#94a3b8' : '#cbd5e1', lineHeight: 1.5, borderLeft: isSkipped ? '3px solid #ef4444' : isCodingTask ? '3px solid #06b6d4' : '3px solid #6366f1' }}>
                     <strong style={{ color: '#94a3b8', display: 'block', fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {isSkipped ? 'Candidate Response: (Skipped)' : 'Candidate Response:'}
+                      {isSkipped ? 'Candidate Response: (Skipped)' : isCodingTask ? 'Candidate Code Solution:' : 'Candidate Response:'}
                     </strong>
-                    {q.userAnswer || '[No response submitted]'}
+                    {q.code ? (
+                      <div style={{ marginTop: 6, background: '#090d16', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.04)', fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          {q.language || q.codingDetails?.language || 'javascript'}
+                        </div>
+                        <pre style={{ margin: 0, padding: 12, fontSize: 12.5, color: '#f8fafc', overflowX: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
+                          <code>{q.code}</code>
+                        </pre>
+                      </div>
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap' }}>
+                        {q.userAnswer || '[No response submitted]'}
+                      </div>
+                    )}
                   </div>
 
                   {/* AI Coaching Feedback */}
@@ -430,13 +474,40 @@ export function InterviewResultPage() {
                     </div>
                   )}
 
+                  {/* AI Optimal Solution Code (if coding challenge) */}
+                  {idealCode && (
+                    <div style={{ margin: '0 0 12px 34px', background: 'rgba(6, 182, 212, 0.06)', border: '1px solid rgba(6, 182, 212, 0.25)', padding: '12px 16px', borderRadius: 8, fontSize: 13, color: '#cffafe', lineHeight: 1.55 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <Sparkles size={14} style={{ color: '#22d3ee' }} />
+                        <strong style={{ color: '#22d3ee', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          AI Optimal Code Solution ({q.codingDetails?.language || 'javascript'}):
+                        </strong>
+                      </div>
+                      <pre
+                        style={{
+                          margin: 0,
+                          padding: 12,
+                          background: '#090d16',
+                          borderRadius: 6,
+                          color: '#38bdf8',
+                          fontSize: 12.5,
+                          overflowX: 'auto',
+                          fontFamily: 'JetBrains Mono, monospace',
+                          border: '1px solid rgba(6, 182, 212, 0.2)',
+                        }}
+                      >
+                        <code>{idealCode}</code>
+                      </pre>
+                    </div>
+                  )}
+
                   {/* Ideal / Recommended Model Answer for Learning */}
                   {q.idealAnswer && (
                     <div style={{ margin: '0 0 0 34px', background: 'rgba(16, 185, 129, 0.07)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '12px 16px', borderRadius: 8, fontSize: 13, color: '#d1fae5', lineHeight: 1.55 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                         <Sparkles size={14} style={{ color: '#34d399' }} />
                         <strong style={{ color: '#34d399', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          AI Recommended / Ideal Answer:
+                          AI Recommended Architecture / Solution Walkthrough:
                         </strong>
                       </div>
                       <div style={{ whiteSpace: 'pre-wrap', color: '#a7f3d0' }}>

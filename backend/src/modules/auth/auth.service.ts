@@ -242,9 +242,13 @@ export class AuthService {
     );
 
     const { password, ...safeUser } = user;
+    const computedName = `${safeUser.firstName || ''} ${safeUser.lastName || ''}`.trim() || safeUser.username;
+    const computedRole = safeUser.targetRole || 'Software Engineer';
 
     return {
       ...safeUser,
+      name: computedName,
+      role: computedRole,
       stats: {
         totalSessions: user.sessions.length,
         completedSessions: completedSessions.length,
@@ -258,23 +262,42 @@ export class AuthService {
    * Updates candidate profile information
    */
   async updateProfile(userId: string, dto: UpdateProfileDto) {
+    let resolvedFirstName = dto.firstName;
+    let resolvedLastName = dto.lastName;
+
+    // If full display name is provided, parse it into first and last names
+    if (dto.name && dto.name.trim()) {
+      const parts = dto.name.trim().split(/\s+/);
+      resolvedFirstName = parts[0];
+      resolvedLastName = parts.slice(1).join(' ') || '';
+    }
+
+    const resolvedTargetRole = dto.targetRole || dto.role;
+
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        targetRole: dto.targetRole,
-        seniorityLevel: dto.seniorityLevel,
-        avatarUrl: dto.avatarUrl,
-        bio: dto.bio,
+        ...(resolvedFirstName !== undefined ? { firstName: resolvedFirstName } : {}),
+        ...(resolvedLastName !== undefined ? { lastName: resolvedLastName } : {}),
+        ...(resolvedTargetRole !== undefined ? { targetRole: resolvedTargetRole } : {}),
+        ...(dto.seniorityLevel !== undefined ? { seniorityLevel: dto.seniorityLevel } : {}),
+        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
+        ...(dto.bio !== undefined ? { bio: dto.bio } : {}),
       },
     });
 
     const { password, ...safeUser } = updated;
+    const computedName = `${safeUser.firstName || ''} ${safeUser.lastName || ''}`.trim() || safeUser.username;
+    const computedRole = safeUser.targetRole || 'Software Engineer';
+
     return {
       success: true,
       message: 'Profile updated successfully',
-      user: safeUser,
+      user: {
+        ...safeUser,
+        name: computedName,
+        role: computedRole,
+      },
     };
   }
 

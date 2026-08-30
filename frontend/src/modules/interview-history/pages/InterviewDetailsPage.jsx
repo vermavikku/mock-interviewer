@@ -84,10 +84,15 @@ export function InterviewDetailsPage() {
             category: q.category,
             difficulty: q.difficulty,
             answer: q.userAnswer || 'No answer recorded for this question.',
-            feedback: q.aiFeedback || 'Answer evaluated by Google Gemini AI.',
+            userAnswer: q.userAnswer,
+            feedback: q.aiFeedback || q.feedback || 'Answer evaluated by Google Gemini AI.',
             score: typeof q.score === 'number' ? q.score : 0,
             expectedKeyPoints: q.expectedKeyPoints,
             idealAnswer: q.idealAnswer,
+            isCoding: q.isCoding || false,
+            codingDetails: q.codingDetails,
+            code: q.code,
+            language: q.language || q.codingDetails?.language,
           })),
         };
 

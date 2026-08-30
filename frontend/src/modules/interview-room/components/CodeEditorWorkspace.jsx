@@ -44,8 +44,16 @@ function solution(input) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (question?.codingDetails?.starterCode) {
-      setCode(question.codingDetails.starterCode);
+    if (question?.codingDetails) {
+      if (question.codingDetails.language) {
+        setLanguage(question.codingDetails.language);
+      }
+      if (question.codingDetails.starterCode) {
+        setCode(question.codingDetails.starterCode);
+      }
+      setTestResults(null);
+    } else if (question?.question) {
+      setCode(`/**\n * Problem: ${question.question}\n */\nfunction solution() {\n  // Write your code here\n}\n`);
       setTestResults(null);
     }
   }, [question]);

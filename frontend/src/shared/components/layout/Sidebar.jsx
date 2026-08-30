@@ -42,18 +42,31 @@ export function Sidebar({ isCollapsed, setIsCollapsed, mobileOpen, setMobileOpen
     { to: '/resumes', label: 'Resumes', icon: FileText },
   ];
 
-  const handleConfirmLogout = () => {
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
+  const handleConfirmLogout = async () => {
+    // Keep the modal open and spin the Log Out button until logout completes
+    setLogoutLoading(true);
+    try {
+      await logout();
+    } catch (e) {
+      // logout already ignores network errors internally
+    }
     setShowLogoutConfirm(false);
-    navigate('/login');
-    logout();
+    setLogoutLoading(false);
     toast.info('You have been logged out.');
+    navigate('/login');
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    updateProfile({ name: editName, role: editRole });
-    toast.success('Profile settings updated successfully!');
-    setIsSettingsOpen(false);
+    try {
+      await updateProfile({ name: editName, role: editRole });
+      toast.success('Profile settings updated successfully!');
+      setIsSettingsOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update profile settings');
+    }
   };
 
   return (
@@ -130,25 +143,37 @@ export function Sidebar({ isCollapsed, setIsCollapsed, mobileOpen, setMobileOpen
           </button>
 
           {/* User Profile Bar */}
-          <div className="sidebar-user-card">
+          <div
+            className="sidebar-user-card"
+            style={{ cursor: 'pointer' }}
+            onClick={() => navigate('/profile')}
+            title={isCollapsed ? (user?.username || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'My Profile') : undefined}
+          >
             <div className="user-avatar-wrap">
               <img
-                src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                alt={user?.name}
+                src={user?.avatarUrl || user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'alex'}`}
+                alt={user?.username || user?.firstName || 'User'}
                 className="user-avatar"
               />
               <span className="user-online-dot" />
             </div>
             {!isCollapsed && (
               <div className="user-info">
-                <span className="user-name">{user?.name || 'Candidate'}</span>
-                <span className="user-role">{user?.role || 'Engineer'}</span>
+                <span className="user-name">
+                  {user?.username ? `@${user.username}` : [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Candidate'}
+                </span>
+                <span className="user-role">
+                  {user?.targetRole || user?.role || 'Full Stack Engineer'}
+                </span>
               </div>
             )}
             {!isCollapsed && (
               <button
                 className="user-logout-btn"
-                onClick={() => setShowLogoutConfirm(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowLogoutConfirm(true);
+                }}
                 title="Logout"
                 aria-label="Logout"
               >
@@ -169,6 +194,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed, mobileOpen, setMobileOpen
         confirmLabel="Log Out"
         variant="danger"
         icon={LogOut}
+        isLoading={logoutLoading}
       />
 
       {/* Settings Modal */}

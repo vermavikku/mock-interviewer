@@ -239,19 +239,44 @@ export function InterviewRoomPage() {
     }, 1400);
   };
 
-  const handleSubmitCode = ({ code, language, feedback, score }) => {
+  const handleSubmitCode = async ({ code, language, explanation, testResults }) => {
     if (!session || !session.questions?.length) return;
 
     const currentQuestion = session.questions[currentQuestionIndex];
+    const fullSubmissionText = `\`\`\`${language}\n${code}\n\`\`\`${explanation ? `\n\nCandidate Notes & Complexity:\n${explanation}` : ''}`;
+
     const userMsg = {
       id: `msg_user_code_${Date.now()}`,
       sender: 'user',
-      text: `\`\`\`${language}\n${code}\n\`\`\``,
+      text: fullSubmissionText,
       timestamp: new Date().toISOString(),
+      isCode: true,
+      language,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setAiStatus('Thinking');
+
+    let evalResult = evaluateAnswer(currentQuestion?.question || '', fullSubmissionText);
+
+    // Call backend API in parallel to evaluate code
+    if (session.id && !session.id.startsWith('int_')) {
+      try {
+        const res = await api.submitQuestionAnswer(
+          session.id,
+          currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
+          fullSubmissionText
+        );
+        if (res?.evaluatedQuestion) {
+          evalResult = {
+            score: res.evaluatedQuestion.score ?? evalResult.score,
+            feedback: res.evaluatedQuestion.aiFeedback || evalResult.feedback,
+          };
+        }
+      } catch (e) {
+        console.warn('Backend code evaluation sync notice:', e);
+      }
+    }
 
     const updatedAnswered = [
       ...answeredQuestions,
@@ -260,11 +285,15 @@ export function InterviewRoomPage() {
         question: currentQuestion?.question || '',
         category: currentQuestion?.category || session.config?.type,
         difficulty: currentQuestion?.difficulty || session.config?.difficulty,
-        userAnswer: code,
-        feedback,
-        score,
+        userAnswer: fullSubmissionText,
+        feedback: evalResult.feedback || 'Code reviewed and evaluated by Google Gemini AI.',
+        score: evalResult.score,
         code,
         language,
+        testResults,
+        isCoding: true,
+        idealAnswer: currentQuestion?.idealAnswer,
+        codingDetails: currentQuestion?.codingDetails,
       },
     ];
     setAnsweredQuestions(updatedAnswered);
@@ -283,7 +312,7 @@ export function InterviewRoomPage() {
           text: nextQ.question,
           timestamp: new Date().toISOString(),
           category: nextQ.category,
-          feedback: `AI Code Review: ${feedback}`,
+          feedback: `AI Code Review: ${evalResult.feedback}`,
         };
 
         setMessages((prev) => [...prev, aiMsg]);
@@ -380,6 +409,10 @@ export function InterviewRoomPage() {
         const origQ = session?.questions?.find((sq) => sq.id === q.id);
         return {
           ...q,
+          isCoding: q.isCoding || origQ?.isCoding,
+          codingDetails: q.codingDetails || origQ?.codingDetails,
+          code: q.code || origQ?.code,
+          language: q.language || origQ?.language || origQ?.codingDetails?.language,
           idealAnswer: q.idealAnswer || origQ?.idealAnswer,
         };
       }),

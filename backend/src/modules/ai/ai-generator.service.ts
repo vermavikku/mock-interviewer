@@ -27,6 +27,7 @@ export class AiGeneratorService {
 
   /**
    * Generates tailored interview questions based on raw extracted resume text and interview configuration
+   * (Direct Google Gemini AI call — fallbacks disabled for testing)
    */
   async generateQuestions(params: {
     rawResumeText: string;
@@ -38,19 +39,20 @@ export class AiGeneratorService {
   }): Promise<SessionQuestion[]> {
     const count = params.questionCount || 5;
 
-    if (this.apiKey) {
-      try {
-        const geminiQuestions = await this.generateWithGemini(params, count);
-        this.logger.log(`🤖 [Google Gemini AI] Successfully generated ${geminiQuestions.length} tailored questions using model "${this.modelName}"`);
-        return geminiQuestions;
-      } catch (err) {
-        this.logger.warn(`⚠️ [Smart Local Fallback] Google Gemini generation failed (${err.message}). Activating smart local generator.`);
-      }
-    } else {
-      this.logger.warn(`⚠️ [Smart Local Fallback] No GEMINI_API_KEY detected in environment. Using smart local generator.`);
+    if (!this.apiKey) {
+      throw new Error(
+        '⚠️ GEMINI_API_KEY is not configured in backend/.env. Please configure GEMINI_API_KEY to test AI generation directly.',
+      );
     }
 
+    this.logger.log(`🤖 [Direct AI Call] Calling Google Gemini (${this.modelName}) to generate questions...`);
+    const geminiQuestions = await this.generateWithGemini(params, count);
+    this.logger.log(`🤖 [Google Gemini AI] Successfully generated ${geminiQuestions.length} tailored questions using model "${this.modelName}"`);
+    return geminiQuestions;
+
+    /* --- FALLBACK DISABLED FOR TESTING ---
     return this.generateLocally(params, count);
+    ---------------------------------------- */
   }
 
   private async generateWithGemini(
@@ -63,27 +65,53 @@ export class AiGeneratorService {
     },
     count: number,
   ): Promise<SessionQuestion[]> {
+    const isTechnical = params.interviewType.toLowerCase().includes('tech');
+
     const prompt = `
 You are an expert technical bar-raiser hiring manager conducting a ${params.seniorityLevel} level ${params.interviewType} interview for the position of "${params.targetRole}" (Difficulty: ${params.difficulty}).
 
-Here is the candidate's raw extracted resume text:
+Candidate Resume Extract:
 """
 ${params.rawResumeText.slice(0, 8000)}
 """
 
-Generate exactly ${count} relevant, tailored interview questions that evaluate both their background from the resume and the target role requirements.
-For EACH question, provide a comprehensive, best-practice "idealAnswer" (2-3 detailed paragraphs explaining the architectural design, trade-offs, relevant metrics, code or query examples, and best practices) that an elite candidate would deliver.
+Instructions:
+1. Examine the candidate's resume for their primary programming languages (e.g. JavaScript, TypeScript, Python, Java, Go, C++, SQL, C#) and technical domain experience.
+2. Generate exactly ${count} relevant, tailored interview questions.
+${isTechnical ? `3. For this Technical interview: Include 1 or 2 practical, hands-on CODING CHALLENGE questions (with "isCoding": true) tailored to their primary programming language from the resume. For coding challenges, provide "codingDetails" with "language", "starterCode", "testCases", and "idealSolutionCode". For conceptual/architectural questions, set "isCoding": false.` : '3. For non-technical questions, set "isCoding": false.'}
+4. For EACH question, provide a comprehensive, best-practice "idealAnswer" that an elite candidate would deliver.
 
 Respond ONLY with a valid JSON array of objects with the following schema:
 [
   {
     "id": "q1",
     "questionNumber": 1,
-    "question": "Question text here...",
-    "category": "Technical Architecture | System Scalability | Database & Data Access | Problem Solving | Behavioral & Leadership",
+    "question": "Question or problem statement here...",
+    "category": "Technical Architecture | System Scalability | Data Structures & Algorithms | Database & SQL | Incident Response",
     "difficulty": "${params.difficulty}",
+    "isCoding": false,
     "expectedKeyPoints": ["Point 1", "Point 2", "Point 3", "Point 4"],
-    "idealAnswer": "Comprehensive model answer explaining core architecture, code patterns, tradeoffs, SLAs, and best practices..."
+    "idealAnswer": "Comprehensive model answer explaining core architecture, patterns, tradeoffs, and best practices..."
+  },
+  {
+    "id": "q2",
+    "questionNumber": 2,
+    "question": "Write a function that solves [specific algorithmic or data structure problem]...",
+    "category": "Data Structures & Algorithms",
+    "difficulty": "${params.difficulty}",
+    "isCoding": true,
+    "codingDetails": {
+      "language": "javascript",
+      "starterCode": "/**\\n * @param {any} input\\n * @return {any}\\n */\\nfunction solution(input) {\\n  // Your code here\\n}\\n",
+      "testCases": [
+        { "input": "input_val_1", "expected": "expected_val_1" },
+        { "input": "input_val_2", "expected": "expected_val_2" },
+        { "input": "input_val_3", "expected": "expected_val_3" }
+      ],
+      "idealSolutionCode": "function solution(input) {\\n  // Optimal O(N) implementation\\n}"
+    },
+    "expectedKeyPoints": ["Optimal Time and Space Complexity", "Handles edge cases", "Clean modular structure"],
+    "idealAnswer": "Explanation of the algorithm, optimal time/space complexity analysis, and edge case breakdown..."
   }
 ]
 `;
@@ -148,6 +176,13 @@ Respond ONLY with a valid JSON array of objects with the following schema:
       source: 'GOOGLE_GEMINI_AI' as const,
       model: this.modelName,
       isFallback: false,
+      isCoding: Boolean(q.isCoding),
+      codingDetails: q.codingDetails || (q.isCoding ? {
+        language: 'javascript',
+        starterCode: 'function solution() {\n  // Write code here\n}',
+        testCases: [],
+        idealSolutionCode: q.idealAnswer,
+      } : undefined),
     }));
   }
 
@@ -264,70 +299,81 @@ Respond ONLY with a valid JSON array of objects with the following schema:
       };
     }
 
-    if (this.apiKey) {
-      try {
-        const prompt = `
-You are a strict, senior technical interview bar-raiser evaluating a candidate's answer.
+    if (!this.apiKey) {
+      throw new Error(
+        '⚠️ GEMINI_API_KEY is not configured in backend/.env. Please configure GEMINI_API_KEY to test AI answer evaluation directly.',
+      );
+    }
 
-Question: "${params.question}"
+    const isCodeSubmission =
+      rawAnswer.includes('```') ||
+      rawAnswer.includes('function') ||
+      rawAnswer.includes('def ') ||
+      rawAnswer.includes('class ') ||
+      rawAnswer.includes('=>') ||
+      rawAnswer.includes('return ');
+
+    const prompt = `
+You are a strict, senior technical interview bar-raiser evaluating a candidate's ${isCodeSubmission ? 'code implementation & problem-solving approach' : 'answer'}.
+
+Question / Problem: "${params.question}"
 Expected Key Points: ${JSON.stringify(params.expectedKeyPoints || [])}
-Reference Ideal Answer: "${params.idealAnswer || 'Comprehensive architectural response'}"
+Reference Ideal Answer: "${params.idealAnswer || 'Comprehensive architectural or algorithmic response'}"
 
-Candidate Answer: "${rawAnswer}"
+Candidate Submission:
+"""
+${rawAnswer}
+"""
 
 Evaluation Rubric:
-- 0 to 20: Completely irrelevant, gibberish, or fundamentally incorrect.
-- 21 to 50: Weak, missing almost all key points, lacks technical depth or understanding.
-- 51 to 70: Basic/partial understanding, mentions keywords but lacks depth, concrete examples, or trade-offs.
-- 71 to 85: Good solid answer, addresses core concepts with clear explanation.
-- 86 to 100: Exceptional, comprehensive bar-raiser response covering architecture, trade-offs, edge cases, and measurable production impact.
+- 0 to 20: Completely irrelevant, empty/broken syntax, or fundamentally incorrect logic.
+- 21 to 50: Incomplete, missing critical edge cases, wrong algorithmic approach, or poor complexity.
+- 51 to 70: Working but sub-optimal solution (e.g. O(N^2) brute force when O(N) is expected), minor edge case bugs, or lacks technical depth.
+- 71 to 85: Clean, correct solution addressing core constraints with good complexity analysis.
+- 86 to 100: Exceptional, optimal time/space complexity, handles all edge cases (null, empty, boundary limits), with clean idiomatic code and trade-off commentary.
 
-Be strict and realistic. Do not give high scores to vague or superficial responses.
+${isCodeSubmission ? 'For code submissions: Explicitly evaluate time/space complexity (e.g. O(N) Time, O(1) Space), edge cases, and code readability in your feedback.' : 'Be strict and realistic. Do not give high scores to vague or superficial responses.'}
 Provide a numeric score (0 to 100) and actionable constructive feedback (2-3 sentences).
 
 Respond ONLY in valid JSON format:
-{"score": 75, "feedback": "Constructive critique here..."}
+{"score": 75, "feedback": "Constructive critique highlighting complexity, correctness, and improvement areas..."}
 `;
-        let rawResponseText = '';
+    let rawResponseText = '';
 
-        if (this.aiClient) {
-          const response = await this.aiClient.models.generateContent({
-            model: this.modelName,
-            contents: prompt,
-            config: {
-              responseMimeType: 'application/json',
-              temperature: 0.2,
-            },
-          });
-          rawResponseText = response.text || '';
-        } else {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
-          const res = await axios.post(
-            url,
-            {
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: 'application/json',
-                temperature: 0.2,
-              },
-            },
-            { headers: { 'Content-Type': 'application/json' } },
-          );
-          rawResponseText = res.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        }
-
-        const cleanJson = rawResponseText.replace(/^```json/i, '').replace(/```$/i, '').trim();
-        const parsed = JSON.parse(cleanJson);
-        return {
-          score: Math.min(100, Math.max(0, Number(parsed.score) || 0)),
-          feedback: parsed.feedback || 'Answer evaluated based on technical depth and key criteria.',
-        };
-      } catch (err) {
-        this.logger.warn(`Google Gemini answer evaluation fallback: ${err.message}`);
-      }
+    if (this.aiClient) {
+      const response = await this.aiClient.models.generateContent({
+        model: this.modelName,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+        },
+      });
+      rawResponseText = response.text || '';
+    } else {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
+      const res = await axios.post(
+        url,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+          },
+        },
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+      rawResponseText = res.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
-    // Local evaluation heuristic (strict)
+    const cleanJson = rawResponseText.replace(/^```json/i, '').replace(/```$/i, '').trim();
+    const parsed = JSON.parse(cleanJson);
+    return {
+      score: Math.min(100, Math.max(0, Number(parsed.score) || 0)),
+      feedback: parsed.feedback || 'Answer evaluated based on technical depth and key criteria.',
+    };
+
+    /* --- LOCAL HEURISTIC EVALUATION FALLBACK DISABLED FOR TESTING ---
     const wordCount = rawAnswer.split(/\s+/).filter(Boolean).length;
     if (wordCount < 15) {
       return {
@@ -350,6 +396,7 @@ Respond ONLY in valid JSON format:
       score: 90,
       feedback: 'Comprehensive and thorough answer demonstrating deep technical domain knowledge and clear trade-off evaluation.',
     };
+    ----------------------------------------------------------------- */
   }
 
   /**

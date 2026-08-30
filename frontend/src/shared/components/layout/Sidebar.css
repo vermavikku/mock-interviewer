@@ -231,6 +231,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  transition: all var(--trans-fast);
+}
+
+.sidebar-user-card:hover {
+  background: var(--bg-surface-hover, rgba(255, 255, 255, 0.06));
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .sidebar-collapsed .sidebar-user-card {
@@ -242,8 +249,8 @@
 
 .user-avatar-wrap {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
@@ -252,7 +259,8 @@
   height: 100%;
   border-radius: var(--radius-full);
   object-fit: cover;
-  border: 1px solid var(--border-medium);
+  border: 1.5px solid var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .user-online-dot {
@@ -262,8 +270,8 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--color-success);
-  border: 2px solid var(--bg-surface);
+  background: #10b981;
+  border: 2px solid #0B0F19;
 }
 
 .user-info {

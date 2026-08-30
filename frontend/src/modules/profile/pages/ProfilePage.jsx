@@ -59,6 +59,12 @@ export function ProfilePage() {
     }
   }, [user]);
 
+  // Pull fresh profile from the DB on mount so the form is pre-filled with
+  // the latest persisted info (even if the localStorage cache is stale).
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -247,6 +253,14 @@ export function ProfilePage() {
 
           <form onSubmit={handleSaveProfile}>
             <div className="profile-form-grid">
+              <Input
+                label="Username (Login Identifier)"
+                value={user?.username || ''}
+                onChange={() => {}}
+                placeholder="e.g. alex_vance"
+                disabled
+              />
+
               <Input
                 label="First Name"
                 value={firstName}

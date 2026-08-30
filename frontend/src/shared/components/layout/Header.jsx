@@ -33,11 +33,20 @@ export function Header({ onMenuClick }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleConfirmLogout = () => {
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
+  const handleConfirmLogout = async () => {
+    // Keep the modal open and spin the Log Out button until logout completes
+    setLogoutLoading(true);
+    try {
+      await logout();
+    } catch (e) {
+      // logout already ignores network errors internally
+    }
     setShowLogoutConfirm(false);
-    navigate('/login');
-    logout();
+    setLogoutLoading(false);
     toast.info('You have been logged out.');
+    navigate('/login');
   };
 
   const handleOpenSettings = () => {
@@ -47,11 +56,15 @@ export function Header({ onMenuClick }) {
     setIsSettingsOpen(true);
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    updateProfile({ name: editName, role: editRole });
-    toast.success('Profile settings updated successfully!');
-    setIsSettingsOpen(false);
+    try {
+      await updateProfile({ name: editName, role: editRole });
+      toast.success('Profile settings updated successfully!');
+      setIsSettingsOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update profile settings');
+    }
   };
 
   return (
@@ -78,12 +91,12 @@ export function Header({ onMenuClick }) {
             <div className="header-avatar-wrap">
               <img
                 src={user?.avatarUrl || user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'alex'}`}
-                alt={user?.name || 'User'}
+                alt={user?.username || user?.firstName || 'User'}
                 className="header-user-avatar"
               />
               <span className="header-online-indicator" />
             </div>
-            <span className="header-profile-username">{user?.name || user?.username || 'Candidate'}</span>
+            <span className="header-profile-username">{user?.username || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Candidate'}</span>
             <ChevronDown size={15} className={`header-chevron ${isDropdownOpen ? 'rotate' : ''}`} />
           </button>
 
@@ -102,13 +115,17 @@ export function Header({ onMenuClick }) {
                 <div className="dropdown-avatar-wrap">
                   <img
                     src={user?.avatarUrl || user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username || 'alex'}`}
-                    alt={user?.name || 'User'}
+                    alt={user?.username || 'User'}
                     className="dropdown-user-avatar"
                   />
                 </div>
                 <div className="dropdown-user-details">
-                  <span className="dropdown-user-name">{user?.name || user?.username || 'Candidate'}</span>
-                  <span className="dropdown-user-role">{user?.targetRole || user?.role || 'Software Engineer'}</span>
+                  <span className="dropdown-user-name">
+                    {user?.username ? `@${user.username}` : [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Candidate'}
+                  </span>
+                  <span className="dropdown-user-role">
+                    {user?.targetRole || user?.role || 'Full Stack Engineer'}
+                  </span>
                 </div>
               </div>
 
@@ -169,6 +186,7 @@ export function Header({ onMenuClick }) {
         confirmLabel="Log Out"
         variant="danger"
         icon={LogOut}
+        isLoading={logoutLoading}
       />
 
       {/* Settings Modal */}

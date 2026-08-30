@@ -21,7 +21,7 @@ export interface SessionQuestion {
   id: string;
   questionNumber: number;
   question: string;
-  category: string; // Technical, Architecture, Behavioral, ProblemSolving
+  category: string; // Technical, Architecture, Behavioral, ProblemSolving, Coding & Algorithms
   difficulty: string;
   expectedKeyPoints?: string[];
   idealAnswer?: string;
@@ -33,6 +33,20 @@ export interface SessionQuestion {
   source?: 'GOOGLE_GEMINI_AI' | 'LOCAL_FALLBACK';
   model?: string;
   isFallback?: boolean;
+  isCoding?: boolean;
+  codingDetails?: {
+    language?: string;
+    starterCode?: string;
+    testCases?: Array<{
+      input: string;
+      expected: string;
+      actual?: string;
+      passed?: boolean;
+    }>;
+    idealSolutionCode?: string;
+  };
+  code?: string;
+  language?: string;
 }
 
 export interface SessionEvaluation {

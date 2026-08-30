@@ -1,39 +1,13 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { removeToast } from '../store/slices/toastSlice';
+import { useToast as useReduxToast } from '../store/hooks';
 import './Toast.css';
 
-const ToastContext = createContext(null);
-
 export function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
-
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const addToast = useCallback(
-    (message, type = 'info', duration = 4000) => {
-      const id = `${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      const newToast = { id, message, type, duration };
-
-      setToasts((prev) => [...prev, newToast]);
-
-      if (duration > 0) {
-        setTimeout(() => {
-          removeToast(id);
-        }, duration);
-      }
-      return id;
-    },
-    [removeToast]
-  );
-
-  const toast = {
-    success: (msg, dur) => addToast(msg, 'success', dur),
-    error: (msg, dur) => addToast(msg, 'error', dur),
-    warning: (msg, dur) => addToast(msg, 'warning', dur),
-    info: (msg, dur) => addToast(msg, 'info', dur),
-  };
+  const dispatch = useDispatch();
+  const toasts = useSelector((state) => state.toast.toasts || []);
 
   const getIcon = (type) => {
     switch (type) {
@@ -49,7 +23,7 @@ export function ToastProvider({ children }) {
   };
 
   return (
-    <ToastContext.Provider value={toast}>
+    <>
       {children}
       <div className="toast-container" aria-live="polite">
         {toasts.map((t) => (
@@ -59,7 +33,7 @@ export function ToastProvider({ children }) {
               <span className="toast-message">{t.message}</span>
             </div>
             <button
-              onClick={() => removeToast(t.id)}
+              onClick={() => dispatch(removeToast(t.id))}
               className="toast-close"
               aria-label="Close notification"
             >
@@ -68,14 +42,11 @@ export function ToastProvider({ children }) {
           </div>
         ))}
       </div>
-    </ToastContext.Provider>
+    </>
   );
 }
 
 export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
+  return useReduxToast();
 }
+

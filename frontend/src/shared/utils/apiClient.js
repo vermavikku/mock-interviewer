@@ -146,7 +146,12 @@ export async function authGetProfile(skipAutoRefresh = false) {
   if (!response.ok) {
     throw new Error('Failed to fetch user profile');
   }
-  return response.json();
+  const payload = await response.json();
+  // getProfile is wrapped by the global TransformInterceptor as
+  // { success, data: user } while some endpoints pass through as
+  // { success, user }. Normalize to the actual user object so callers
+  // can read username/firstName/etc at the top level.
+  return payload?.data || payload?.user || payload;
 }
 
 export async function authUpdateProfile(updates) {

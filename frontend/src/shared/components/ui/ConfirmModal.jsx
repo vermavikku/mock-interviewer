@@ -60,12 +60,13 @@ export function ConfirmModal({
             variant={isDanger ? 'danger' : 'primary'}
             onClick={onConfirm}
             disabled={isLoading}
+            loading={isLoading}
             style={{
               flex: 1,
               color: '#ffffff',
             }}
           >
-            {isLoading ? 'Processing...' : confirmLabel}
+            {confirmLabel}
           </Button>
         </div>
       </div>
