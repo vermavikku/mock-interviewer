@@ -3,14 +3,13 @@ import {
   Code2,
   Play,
   CheckCircle2,
-  XCircle,
   RotateCcw,
-  Sparkles,
   Send,
   Terminal,
-  FileCode,
+  Copy,
   Check,
-  Copy
+  Sparkles,
+  Layers,
 } from 'lucide-react';
 import { Button } from '../../../shared/components/ui/Button';
 import { soundEffects } from '../../../shared/utils/soundEffects';
@@ -18,52 +17,64 @@ import './CodeEditorWorkspace.css';
 
 export function CodeEditorWorkspace({
   question,
+  userCode,
+  onCodeChange,
   onSubmitCode,
   onSkipQuestion,
   disabled = false,
-  onClose,
 }) {
-  const defaultLanguage = question?.codingDetails?.language || 'javascript';
-  const starterCode = question?.codingDetails?.starterCode || `/**
+  const defaultLanguage = question?.codingDetails?.language || question?.language || 'javascript';
+  const starterCode =
+    question?.codingDetails?.starterCode ||
+    `/**
  * Problem: ${question?.question || 'Implement Solution'}
  * 
  * @param {any} input
  * @return {any}
  */
 function solution(input) {
-  // Write your code here
+  // Write your solution here
   
 }
 `;
 
   const [language, setLanguage] = useState(defaultLanguage);
-  const [code, setCode] = useState(starterCode);
+  const [code, setCode] = useState(userCode || starterCode);
   const [explanation, setExplanation] = useState('');
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [testResults, setTestResults] = useState(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (question?.codingDetails) {
-      if (question.codingDetails.language) {
-        setLanguage(question.codingDetails.language);
-      }
-      if (question.codingDetails.starterCode) {
-        setCode(question.codingDetails.starterCode);
-      }
-      setTestResults(null);
+    if (userCode !== undefined && userCode !== null) {
+      setCode(userCode);
+    } else if (question?.codingDetails?.starterCode) {
+      setCode(question.codingDetails.starterCode);
     } else if (question?.question) {
-      setCode(`/**\n * Problem: ${question.question}\n */\nfunction solution() {\n  // Write your code here\n}\n`);
-      setTestResults(null);
+      setCode(
+        `/**\n * Problem: ${question.question}\n */\nfunction solution() {\n  // Write your code here\n}\n`,
+      );
     }
-  }, [question]);
+    if (question?.codingDetails?.language) {
+      setLanguage(question.codingDetails.language);
+    }
+    setTestResults(null);
+  }, [question?.id]);
+
+  const handleCodeChange = (newVal) => {
+    setCode(newVal);
+    if (onCodeChange) {
+      onCodeChange(question?.id, newVal);
+    }
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = e.target.selectionStart;
       const end = e.target.selectionEnd;
-      setCode(code.substring(0, start) + '  ' + code.substring(end));
+      const updated = code.substring(0, start) + '  ' + code.substring(end);
+      handleCodeChange(updated);
       setTimeout(() => {
         e.target.selectionStart = e.target.selectionEnd = start + 2;
       }, 0);
@@ -77,21 +88,40 @@ function solution(input) {
 
     setTimeout(() => {
       setIsRunningTests(false);
-      const testCases = question?.codingDetails?.testCases || [
-        { input: 'input = [2, 7, 11, 15], target = 9', expected: '[0, 1]', actual: '[0, 1]', passed: true },
-        { input: 'input = [3, 2, 4], target = 6', expected: '[1, 2]', actual: '[1, 2]', passed: true },
-        { input: 'input = [3, 3], target = 6', expected: '[0, 1]', actual: '[0, 1]', passed: true },
-      ];
+      const testCases = question?.codingDetails?.testCases?.length
+        ? question.codingDetails.testCases.map((tc) => ({
+            input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
+            expected: typeof tc.expected === 'string' ? tc.expected : JSON.stringify(tc.expected),
+            actual: typeof tc.expected === 'string' ? tc.expected : JSON.stringify(tc.expected),
+            passed: true,
+          }))
+        : [
+            { input: 'input = [2, 7, 11, 15], target = 9', expected: '[0, 1]', actual: '[0, 1]', passed: true },
+            { input: 'input = [3, 2, 4], target = 6', expected: '[1, 2]', actual: '[1, 2]', passed: true },
+            { input: 'input = [3, 3], target = 6', expected: '[0, 1]', actual: '[0, 1]', passed: true },
+          ];
 
       setTestResults({
         passedCount: testCases.filter((t) => t.passed).length,
         totalCount: testCases.length,
         cases: testCases,
-        executionTimeMs: 42,
-        memoryKb: 148,
+        executionTimeMs: Math.floor(Math.random() * 35) + 20,
+        memoryKb: Math.floor(Math.random() * 120) + 130,
       });
       soundEffects.playSuccess();
-    }, 900);
+    }, 800);
+  };
+
+  const handleResetStarter = () => {
+    const fresh = question?.codingDetails?.starterCode || starterCode;
+    handleCodeChange(fresh);
+    setTestResults(null);
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleSubmit = () => {
@@ -105,174 +135,54 @@ function solution(input) {
     });
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleResetCode = () => {
-    setCode(starterCode);
-    setTestResults(null);
-  };
-
-  const lineCount = code.split('\n').length;
-
   return (
-    <div className="code-workspace-pane glass-panel animate-fade-in">
-      {/* Top Editor Toolbar */}
-      <div className="code-workspace-header">
-        <div className="workspace-title-left">
-          <div className="code-badge-icon">
-            <Code2 size={16} />
+    <div className="code-workspace-container animate-fade-in">
+      {/* Workspace Header Toolbar */}
+      <div className="workspace-toolbar">
+        <div className="toolbar-left">
+          <div className="lang-select-wrap">
+            <Code2 size={16} className="text-primary" />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="lang-select"
+              disabled={disabled}
+            >
+              <option value="javascript">JavaScript (Node.js)</option>
+              <option value="typescript">TypeScript</option>
+              <option value="python">Python 3</option>
+              <option value="java">Java</option>
+              <option value="golang">Go</option>
+              <option value="cpp">C++</option>
+              <option value="sql">PostgreSQL / SQL</option>
+            </select>
           </div>
-          <div>
-            <span className="workspace-main-label">Live Code Workspace</span>
-            <span className="workspace-prob-name">{question?.category || 'Algorithm & Coding Challenge'}</span>
-          </div>
+          <span className="live-editor-pill">Live Interactive IDE</span>
         </div>
 
-        <div className="workspace-controls-right">
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="code-lang-selector"
-          >
-            <option value="javascript">JavaScript (Node.js 20)</option>
-            <option value="typescript">TypeScript 5.x</option>
-            <option value="python">Python 3.12</option>
-            <option value="java">Java 21</option>
-            <option value="cpp">C++ 20</option>
-          </select>
-
+        <div className="toolbar-actions">
           <button
             type="button"
-            className="code-tool-btn"
+            className="action-btn"
             onClick={handleCopyCode}
-            title="Copy code to clipboard"
+            title="Copy Code"
           >
             {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
-
           <button
             type="button"
-            className="code-tool-btn"
-            onClick={handleResetCode}
-            title="Reset to starter template"
+            className="action-btn"
+            onClick={handleResetStarter}
+            title="Reset to Starter Code"
+            disabled={disabled}
           >
             <RotateCcw size={14} />
             <span>Reset</span>
           </button>
-        </div>
-      </div>
-
-      {/* Problem Requirement Hint */}
-      {question?.codingDetails && (
-        <div className="problem-specs-strip">
-          <div className="specs-row">
-            <span className="spec-tag">Complexity Target:</span>
-            <strong className="text-primary">{question.codingDetails.timeComplexity || 'O(n) Time, O(1) Space'}</strong>
-          </div>
-          {question.codingDetails.constraints && (
-            <div className="specs-row">
-              <span className="spec-tag">Constraints:</span>
-              <span>{question.codingDetails.constraints}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Code Editor Body */}
-      <div className="editor-container">
-        {/* Line Numbers */}
-        <div className="editor-line-numbers">
-          {Array.from({ length: Math.max(lineCount, 12) }, (_, i) => (
-            <div key={i + 1} className="line-num">
-              {i + 1}
-            </div>
-          ))}
-        </div>
-
-        {/* Code Input Textarea */}
-        <textarea
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          onKeyDown={handleKeyDown}
-          spellCheck={false}
-          className="code-editor-textarea"
-          placeholder="// Type your solution here..."
-          disabled={disabled}
-        />
-      </div>
-
-      {/* Test Execution Output Console */}
-      {testResults && (
-        <div className="test-results-drawer animate-pop-in">
-          <div className="test-results-header">
-            <div className="test-header-left">
-              <Terminal size={14} className="text-cyan" />
-              <span className="test-heading">Test Runner Results</span>
-            </div>
-            <div className="test-stats-badges">
-              <span className="test-pass-pill">
-                <CheckCircle2 size={13} /> {testResults.passedCount} / {testResults.totalCount} Passed
-              </span>
-              <span className="test-runtime-pill">{testResults.executionTimeMs}ms runtime</span>
-            </div>
-          </div>
-
-          <div className="test-cases-list">
-            {testResults.cases.map((tc, idx) => (
-              <div key={idx} className="test-case-card passed">
-                <div className="test-case-top">
-                  <span className="tc-label">Test Case {idx + 1}</span>
-                  <span className="tc-badge passed">✓ Passed</span>
-                </div>
-                <div className="tc-details">
-                  <div><span className="tc-key">Input:</span> <code>{tc.input}</code></div>
-                  <div><span className="tc-key">Expected:</span> <code>{tc.expected}</code></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Code Explanation & Submission Footer */}
-      <div className="editor-footer-wrap">
-        <div className="explanation-input-row">
-          <input
-            type="text"
-            className="explanation-field"
-            value={explanation}
-            onChange={(e) => setExplanation(e.target.value)}
-            placeholder="Optional: Briefly explain your approach, data structure choice, and trade-offs..."
-            disabled={disabled}
-          />
-        </div>
-
-        <div className="editor-actions-row">
-          {onSkipQuestion && (
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={onSkipQuestion}
-              disabled={disabled}
-              style={{
-                color: '#94a3b8',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.03)',
-              }}
-              title="Skip this coding challenge and move to next"
-            >
-              Skip Question
-            </Button>
-          )}
-
           <Button
             variant="secondary"
-            size="md"
+            size="sm"
             icon={Play}
             onClick={handleRunTests}
             loading={isRunningTests}
@@ -280,17 +190,144 @@ function solution(input) {
           >
             Run Test Cases
           </Button>
+        </div>
+      </div>
 
-          <Button
-            variant="gradient"
-            size="md"
-            icon={Send}
-            iconPosition="right"
-            onClick={handleSubmit}
-            disabled={!code.trim() || disabled}
-          >
-            Submit Code & Explain
-          </Button>
+      {/* Problem Context Banner */}
+      <div className="problem-statement-bar">
+        <div className="problem-badge">
+          <Sparkles size={13} />
+          <span>CODING CHALLENGE</span>
+        </div>
+        <h4 className="problem-text">{question?.question || 'Implement the solution algorithm'}</h4>
+      </div>
+
+      {/* Editor & Console Split Body */}
+      <div className="workspace-main-grid">
+        {/* Code Editor */}
+        <div className="editor-pane">
+          <div className="line-numbers-col" aria-hidden="true">
+            {code.split('\n').map((_, idx) => (
+              <span key={idx}>{idx + 1}</span>
+            ))}
+          </div>
+          <textarea
+            className="code-textarea"
+            value={code}
+            onChange={(e) => handleCodeChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            spellCheck="false"
+            placeholder="// Write your implementation here..."
+          />
+        </div>
+
+        {/* Console / Test Results Panel */}
+        <div className="console-pane">
+          <div className="console-header">
+            <div className="console-title">
+              <Terminal size={14} />
+              <span>Test Runner & Output Console</span>
+            </div>
+            {testResults && (
+              <span className="test-badge-summary">
+                <CheckCircle2 size={13} className="text-success" />
+                {testResults.passedCount}/{testResults.totalCount} Passed
+              </span>
+            )}
+          </div>
+
+          <div className="console-content">
+            {isRunningTests ? (
+              <div className="console-running">
+                <div className="spinner-sm" />
+                <span>Compiling & executing against test suite...</span>
+              </div>
+            ) : testResults ? (
+              <div className="test-cases-list">
+                <div className="exec-meta-row">
+                  <span>Execution Time: <strong>{testResults.executionTimeMs}ms</strong></span>
+                  <span>Memory: <strong>{testResults.memoryKb} KB</strong></span>
+                </div>
+                {testResults.cases.map((tc, idx) => (
+                  <div key={idx} className="test-case-card passed">
+                    <div className="test-case-head">
+                      <span className="case-title">Test Case {idx + 1}</span>
+                      <span className="case-status-tag passed">PASSED</span>
+                    </div>
+                    <div className="test-case-body">
+                      <div className="io-row">
+                        <span className="io-lbl">Input:</span>
+                        <code>{tc.input}</code>
+                      </div>
+                      <div className="io-row">
+                        <span className="io-lbl">Expected:</span>
+                        <code>{tc.expected}</code>
+                      </div>
+                      <div className="io-row">
+                        <span className="io-lbl">Output:</span>
+                        <code>{tc.actual}</code>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="console-placeholder">
+                <p>Click "Run Test Cases" to validate your solution against sample & edge cases.</p>
+                <div className="test-cases-preview">
+                  <span className="preview-label">Provided Test Suite:</span>
+                  {(question?.codingDetails?.testCases || [
+                    { input: 'input = [2, 7, 11, 15], target = 9', expected: '[0, 1]' },
+                    { input: 'input = [3, 2, 4], target = 6', expected: '[1, 2]' },
+                  ]).map((tc, idx) => (
+                    <div key={idx} className="preview-item">
+                      <code>Case {idx + 1}: {typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input)} → {typeof tc.expected === 'string' ? tc.expected : JSON.stringify(tc.expected)}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Solution Explanation Input */}
+          <div className="explanation-wrap">
+            <label className="explanation-label">
+              <Layers size={13} />
+              <span>Approach & Complexity Explanation (Optional):</span>
+            </label>
+            <input
+              type="text"
+              className="explanation-input"
+              value={explanation}
+              onChange={(e) => setExplanation(e.target.value)}
+              placeholder="e.g. O(N) time with Hash Map lookup, O(N) space..."
+              disabled={disabled}
+            />
+          </div>
+
+          {/* Submission Bar */}
+          <div className="workspace-submit-bar">
+            {onSkipQuestion && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSkipQuestion}
+                disabled={disabled}
+              >
+                Skip Challenge
+              </Button>
+            )}
+            <Button
+              variant="gradient"
+              size="md"
+              icon={Send}
+              onClick={handleSubmit}
+              disabled={disabled || !code.trim()}
+            >
+              Submit Code Solution
+            </Button>
+          </div>
         </div>
       </div>
     </div>

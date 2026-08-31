@@ -106,6 +106,9 @@ export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
     // Ignore network error on logout
   }
   localStorage.removeItem(STORAGE_USER_KEY);
+  localStorage.removeItem('interview_ai_history');
+  localStorage.removeItem('interview_ai_active_config');
+  localStorage.removeItem('interview_ai_active_resume');
   return null;
 });
 
@@ -208,6 +211,9 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.loading = false;
       localStorage.removeItem(STORAGE_USER_KEY);
+      localStorage.removeItem('interview_ai_history');
+      localStorage.removeItem('interview_ai_active_config');
+      localStorage.removeItem('interview_ai_active_resume');
     },
   },
   extraReducers: (builder) => {

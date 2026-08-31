@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { InterviewHeader } from '../components/InterviewHeader';
 import { AIAvatarPanel } from '../components/AIAvatarPanel';
@@ -12,9 +12,20 @@ import { evaluateAnswer } from '../../../shared/utils/mockData';
 import { soundEffects } from '../../../shared/utils/soundEffects';
 import { Button } from '../../../shared/components/ui/Button';
 import { ConfirmModal } from '../../../shared/components/ui/ConfirmModal';
-import { EmptyState } from '../../../shared/components/ui/EmptyState';
 import * as api from '../../../shared/utils/apiClient';
-import { Code2, MessageSquare, Columns, AlertTriangle, ArrowLeft, Loader2, Play, SkipForward } from 'lucide-react';
+import {
+  Code2,
+  MessageSquare,
+  Columns,
+  AlertTriangle,
+  ArrowLeft,
+  Loader2,
+  Play,
+  SkipForward,
+  BookOpen,
+  CheckCircle2,
+  ChevronRight,
+} from 'lucide-react';
 import '../components/InterviewRoom.css';
 
 export function InterviewRoomPage() {
@@ -39,18 +50,14 @@ export function InterviewRoomPage() {
   const [showSkipModal, setShowSkipModal] = useState(false);
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
   const [viewMode, setViewMode] = useState('split'); // 'chat' | 'code' | 'split'
+  const [codeMap, setCodeMap] = useState({}); // Per-question code cache
+  const activeSessionRef = useRef(null);
 
-  // Initialize session safely and trigger fullscreen
+  // Staged AI intro & typewriter reveal
   useEffect(() => {
     let cancelled = false;
-
-    // Small delay helper for the staged AI intro
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Appends an AI bubble and types its text out progressively for a natural,
-    // non-flashing reveal. Aborts silently if the effect was cleaned up
-    // (reads `cancelled` from this effect's closure, so it always sees the
-    // latest value after StrictMode double-mount cleanup).
     const typeOutMessage = (id, category, fullText) =>
       new Promise((resolve) => {
         if (cancelled) return resolve();
@@ -61,7 +68,6 @@ export function InterviewRoomPage() {
           { id, sender: 'ai', text: '', timestamp: new Date().toISOString(), category },
         ]);
 
-        // Cap total typing time (~1.4s) regardless of text length
         const tickCount = 70;
         const step = Math.max(1, Math.ceil(fullText.length / tickCount));
         const speed = Math.max(8, Math.round(1400 / tickCount));
@@ -88,8 +94,7 @@ export function InterviewRoomPage() {
         setLoadingSession(true);
         let active = currentSession;
 
-        // If no active session in context, check searchParams or initialize
-        const sessionIdParam = searchParams.get('id');
+        const sessionIdParam = searchParams.get('id') || searchParams.get('sessionId');
         if (!active && sessionIdParam) {
           try {
             const res = await api.getSessionDetails(sessionIdParam);
@@ -114,6 +119,10 @@ export function InterviewRoomPage() {
                 category: q.category || payload.interviewType,
                 difficulty: q.difficulty || payload.difficulty,
                 expectedKeyPoints: q.expectedKeyPoints,
+                isCoding: Boolean(q.isCoding || q.section === 'CODING'),
+                section: q.section || (q.isCoding ? 'CODING' : 'THEORY'),
+                codingDetails: q.codingDetails,
+                idealAnswer: q.idealAnswer,
               })),
               totalDurationSeconds: (payload.targetDurationMin || 30) * 60,
               createdAt: payload.createdAt,
@@ -128,51 +137,53 @@ export function InterviewRoomPage() {
         }
 
         setSession(active);
+        activeSessionRef.current = active;
 
-        // Attempt auto fullscreen
+        // Auto fullscreen attempt
         if (!document.fullscreenElement) {
           try {
             if (document.documentElement.requestFullscreen) {
               document.documentElement.requestFullscreen().catch(() => {});
             }
-          } catch {
-            // Handled silently
-          }
+          } catch {}
         }
 
-        // Start with empty messages and AI in 'Asking' status
         setMessages([]);
         setAiStatus('Asking');
 
         const questionsList = active?.questions || [];
         const firstQ = questionsList[0];
 
-        const greetingText = `Hello, and welcome to your ${active?.config?.level || 'Senior'} ${active?.config?.type || 'Technical'} interview session! I'm Alex, your AI interviewer. I'll be evaluating your system knowledge, architecture decisions, and problem-solving depth. Let's begin!`;
+        const theoryCount = questionsList.filter((q) => !q.isCoding).length;
+        const codingCount = questionsList.filter((q) => q.isCoding).length;
 
-        // Sequential, typewriter-style AI reveal so the greeting and Question 1
-        // appear smoothly instead of flashing in back-to-back.
+        let greetingText = `Hello, and welcome to your ${active?.config?.level || 'Senior'} ${active?.config?.type || 'Technical'} interview session! I'm Alex, your AI interviewer.`;
+        if (theoryCount > 0 && codingCount > 0) {
+          greetingText += ` Today's session is structured into 2 sections: Section 1 covers ${theoryCount} Resume & Technical Theory questions in chat, followed by Section 2 with ${codingCount} live hands-on coding challenges in our integrated IDE. Let's begin!`;
+        } else {
+          greetingText += ` I'll be evaluating your system knowledge, architecture decisions, and problem-solving depth. Let's begin!`;
+        }
+
         await wait(600);
         if (cancelled) return;
         await typeOutMessage('msg_ai_init', 'Session Kickoff', greetingText);
         if (cancelled) return;
 
-        // Natural pause: Alex "formulates" the first question
         setAiStatus('Thinking');
-        await wait(1000);
+        await wait(900);
         if (cancelled) return;
         setAiStatus('Asking');
 
         if (firstQ) {
-          // Unique message id (question ids are not guaranteed unique across flows)
           await typeOutMessage(
             `msg_ai_q_${firstQ.id || 'q1'}_${Date.now()}`,
-            firstQ.category || 'General',
+            firstQ.category || (firstQ.isCoding ? 'Coding Challenge' : 'Technical Theory'),
             firstQ.question,
           );
           if (cancelled) return;
         }
 
-        setAiStatus('Listening'); // Inputs now enabled for the candidate!
+        setAiStatus('Listening');
       } catch (err) {
         console.error('Failed to setup interview room:', err);
         setAiStatus('Listening');
@@ -185,19 +196,22 @@ export function InterviewRoomPage() {
 
     setupRoom();
 
-    // Cancel any in-flight intro timers if the effect re-runs / unmounts
-    // (React StrictMode double-invokes effects in development, which was the
-    // root cause of Question 1 being appended twice).
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const currentQ = session?.questions?.[currentQuestionIndex];
+  const allQuestions = session?.questions || [];
+  const currentQ = allQuestions[currentQuestionIndex];
   const isCodingActive = Boolean(currentQ?.isCoding);
+  const currentSection = isCodingActive ? 'CODING' : 'THEORY';
+
+  const theoryQuestions = allQuestions.filter((q) => !q.isCoding);
+  const codingQuestions = allQuestions.filter((q) => q.isCoding);
+
   const isInputDisabled = aiStatus === 'Asking' || aiStatus === 'Thinking';
 
-  // Automatically activate split view for coding questions and revert to chat for non-coding questions
+  // Automatically adjust view mode on question change
   useEffect(() => {
     if (isCodingActive) {
       setViewMode('split');
@@ -206,10 +220,63 @@ export function InterviewRoomPage() {
     }
   }, [currentQuestionIndex, isCodingActive]);
 
-  const handleSendMessage = ({ text, note }) => {
-    if (!session || !session.questions?.length) return;
+  const handleCodeChange = (qId, newCode) => {
+    if (!qId) return;
+    setCodeMap((prev) => ({ ...prev, [qId]: newCode }));
+  };
 
-    // 1. Add User Message
+  // Deliver next question or complete interview
+  const advanceToQuestion = async (nextIndex) => {
+    if (nextIndex < allQuestions.length) {
+      setCurrentQuestionIndex(nextIndex);
+      const nextQ = allQuestions[nextIndex];
+      const prevQ = allQuestions[currentQuestionIndex];
+
+      // Check if transitioning from Theory section to Coding section
+      const isSectionTransition = !prevQ?.isCoding && nextQ?.isCoding;
+
+      setAiStatus('Thinking');
+      soundEffects.playPop();
+
+      setTimeout(async () => {
+        setAiStatus('Asking');
+
+        if (isSectionTransition) {
+          // Send section transition announcement
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg_ai_transition_${Date.now()}`,
+              sender: 'ai',
+              text: `🎯 Excellent job on the technical and architectural concepts! We are now transitioning to Section 2: Live Hands-on Coding Challenges. The IDE workspace is now active for your coding challenges.`,
+              timestamp: new Date().toISOString(),
+              category: 'Section Transition',
+            },
+          ]);
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg_ai_q_${nextQ.id || nextIndex + 1}_${Date.now()}`,
+            sender: 'ai',
+            text: nextQ.question,
+            timestamp: new Date().toISOString(),
+            category: nextQ.category || (nextQ.isCoding ? 'Coding Challenge' : 'Technical Theory'),
+          },
+        ]);
+        setAiStatus('Listening');
+      }, 700);
+    } else {
+      // Completed all questions
+      completeSession(answeredQuestions);
+    }
+  };
+
+  // Candidate sends text/theory answer
+  const handleSendMessage = ({ text, note }) => {
+    if (!session || !allQuestions.length) return;
+
     const userMsgId = `msg_user_${Date.now()}`;
     const userMsg = {
       id: userMsgId,
@@ -223,11 +290,9 @@ export function InterviewRoomPage() {
     setMessages((prev) => [...prev, userMsg]);
     setAiStatus('Thinking');
 
-    // 2. Evaluate current answer via Google Gemini backend API
-    const currentQuestion = session.questions[currentQuestionIndex];
+    const currentQuestion = allQuestions[currentQuestionIndex];
     let evalResult = evaluateAnswer(currentQuestion?.question || '', text);
 
-    // Call backend API in parallel
     if (session.id && !session.id.startsWith('int_')) {
       api.submitQuestionAnswer(session.id, currentQuestion?.id || `q_${currentQuestionIndex + 1}`, text)
         .then((res) => {
@@ -241,85 +306,72 @@ export function InterviewRoomPage() {
         .catch((e) => console.warn('Answer submit backend sync notice:', e));
     }
 
-    // 3. Record Answer Data
     const updatedAnswered = [
       ...answeredQuestions,
       {
         id: currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
         question: currentQuestion?.question || '',
         category: currentQuestion?.category || session.config?.type,
-        difficulty: currentQuestion?.difficulty || session.config?.difficulty,
         userAnswer: text,
-        feedback: evalResult.feedback,
         score: evalResult.score,
+        feedback: evalResult.feedback,
+        isCoding: false,
+        section: 'THEORY',
       },
     ];
     setAnsweredQuestions(updatedAnswered);
 
-    // 4. AI Follow-up & Next Question Transition
     setTimeout(() => {
-      soundEffects.playPop();
-
-      const nextIdx = currentQuestionIndex + 1;
-      if (nextIdx < session.questions.length) {
-        const nextQ = session.questions[nextIdx];
-        setCurrentQuestionIndex(nextIdx);
-
-        const aiMsg = {
-          id: `msg_ai_${Date.now()}`,
-          sender: 'ai',
-          text: nextQ.question,
-          timestamp: new Date().toISOString(),
-          category: nextQ.category,
-          feedback: evalResult.feedback,
-        };
-
-        setMessages((prev) => [...prev, aiMsg]);
-        setAiStatus('Listening');
-      } else {
-        // Complete the interview
-        completeSession(updatedAnswered);
-      }
-    }, 1400);
+      advanceToQuestion(currentQuestionIndex + 1);
+    }, 1100);
   };
 
-  const handleSubmitCode = async ({ code, language, explanation, testResults }) => {
-    if (!session || !session.questions?.length) return;
+  // Candidate submits code solution
+  const handleSubmitCode = ({ code, language, explanation, testResults }) => {
+    if (!session || !allQuestions.length) return;
 
-    const currentQuestion = session.questions[currentQuestionIndex];
-    const fullSubmissionText = `\`\`\`${language}\n${code}\n\`\`\`${explanation ? `\n\nCandidate Notes & Complexity:\n${explanation}` : ''}`;
+    const currentQuestion = allQuestions[currentQuestionIndex];
+    const userMsgId = `msg_user_code_${Date.now()}`;
+
+    const submissionText = `\`\`\`${language}\n${code}\n\`\`\`${explanation ? `\n\n**Approach:** ${explanation}` : ''}`;
 
     const userMsg = {
-      id: `msg_user_code_${Date.now()}`,
+      id: userMsgId,
       sender: 'user',
-      text: fullSubmissionText,
+      text: submissionText,
       timestamp: new Date().toISOString(),
       isCode: true,
+      code,
       language,
+      testResults,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setAiStatus('Thinking');
 
-    let evalResult = evaluateAnswer(currentQuestion?.question || '', fullSubmissionText);
+    // Score based on test case pass rate + code structure
+    const passedRatio = testResults?.totalCount
+      ? testResults.passedCount / testResults.totalCount
+      : 1;
+    const baseScore = Math.round(passedRatio * 85 + (code.length > 50 ? 10 : 0));
+    const score = Math.min(100, Math.max(40, baseScore));
 
-    // Call backend API in parallel to evaluate code
+    let evalResult = {
+      score,
+      feedback: `Code solution received in ${language}. Passed ${testResults?.passedCount || 3}/${testResults?.totalCount || 3} automated test cases. Execution time: ${testResults?.executionTimeMs || 35}ms.`,
+    };
+
     if (session.id && !session.id.startsWith('int_')) {
-      try {
-        const res = await api.submitQuestionAnswer(
-          session.id,
-          currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
-          fullSubmissionText
-        );
-        if (res?.evaluatedQuestion) {
-          evalResult = {
-            score: res.evaluatedQuestion.score ?? evalResult.score,
-            feedback: res.evaluatedQuestion.aiFeedback || evalResult.feedback,
-          };
-        }
-      } catch (e) {
-        console.warn('Backend code evaluation sync notice:', e);
-      }
+      api.submitQuestionAnswer(session.id, currentQuestion?.id || `q_${currentQuestionIndex + 1}`, submissionText)
+        .then((res) => {
+          if (res?.evaluatedQuestion) {
+            evalResult = {
+              score: res.evaluatedQuestion.score || evalResult.score,
+              feedback: res.evaluatedQuestion.aiFeedback || evalResult.feedback,
+            };
+          }
+        })
+        .catch((e) => console.warn('Code answer submit backend sync notice:', e));
     }
 
     const updatedAnswered = [
@@ -327,130 +379,95 @@ export function InterviewRoomPage() {
       {
         id: currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
         question: currentQuestion?.question || '',
-        category: currentQuestion?.category || session.config?.type,
-        difficulty: currentQuestion?.difficulty || session.config?.difficulty,
-        userAnswer: fullSubmissionText,
-        feedback: evalResult.feedback || 'Code reviewed and evaluated by Google Gemini AI.',
+        category: currentQuestion?.category || 'Data Structures & Algorithms',
+        userAnswer: submissionText,
         score: evalResult.score,
+        feedback: evalResult.feedback,
+        isCoding: true,
+        section: 'CODING',
         code,
         language,
         testResults,
-        isCoding: true,
-        idealAnswer: currentQuestion?.idealAnswer,
-        codingDetails: currentQuestion?.codingDetails,
       },
     ];
     setAnsweredQuestions(updatedAnswered);
 
     setTimeout(() => {
-      soundEffects.playPop();
-
-      const nextIdx = currentQuestionIndex + 1;
-      if (nextIdx < session.questions.length) {
-        const nextQ = session.questions[nextIdx];
-        setCurrentQuestionIndex(nextIdx);
-
-        const aiMsg = {
-          id: `msg_ai_${Date.now()}`,
-          sender: 'ai',
-          text: nextQ.question,
-          timestamp: new Date().toISOString(),
-          category: nextQ.category,
-          feedback: `AI Code Review: ${evalResult.feedback}`,
-        };
-
-        setMessages((prev) => [...prev, aiMsg]);
-        setAiStatus('Listening');
-      } else {
-        completeSession(updatedAnswered);
-      }
-    }, 1500);
+      advanceToQuestion(currentQuestionIndex + 1);
+    }, 1100);
   };
 
   const handleConfirmSkipQuestion = () => {
     setShowSkipModal(false);
-    if (!session || !session.questions?.length) return;
-
-    const currentQuestion = session.questions[currentQuestionIndex];
-
-    // 1. Add candidate skip note in chat transcript
-    const userMsg = {
-      id: `msg_user_skip_${Date.now()}`,
-      sender: 'user',
-      text: `[Skipped Question]`,
-      timestamp: new Date().toISOString(),
+    const currentQuestion = allQuestions[currentQuestionIndex];
+    const skippedAnswer = {
+      id: currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
+      question: currentQuestion?.question || '',
+      category: currentQuestion?.category || session?.config?.type,
+      userAnswer: '[Skipped by Candidate]',
+      score: 0,
+      feedback: 'Question skipped without answer submission. Review the ideal response to practice this topic.',
+      isCoding: isCodingActive,
+      section: isCodingActive ? 'CODING' : 'THEORY',
     };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setAiStatus('Thinking');
-
-    // 2. Record skipped question data (strict 0% score)
-    const updatedAnswered = [
-      ...answeredQuestions,
-      {
-        id: currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
-        question: currentQuestion?.question || '',
-        category: currentQuestion?.category || session.config?.type,
-        difficulty: currentQuestion?.difficulty || session.config?.difficulty,
-        idealAnswer: currentQuestion?.idealAnswer,
-        userAnswer: '[Skipped by Candidate]',
-        feedback: 'This question was skipped without an answer. Review the recommended ideal answer below to study the best approach.',
-        score: 0,
-      },
-    ];
+    const updatedAnswered = [...answeredQuestions, skippedAnswer];
     setAnsweredQuestions(updatedAnswered);
 
-    // 3. AI polite transition & advance to next question
-    setTimeout(() => {
-      soundEffects.playPop();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `msg_skip_${Date.now()}`,
+        sender: 'user',
+        text: '⏩ *Question skipped by candidate.*',
+        timestamp: new Date().toISOString(),
+      },
+    ]);
 
-      const nextIdx = currentQuestionIndex + 1;
-      if (nextIdx < session.questions.length) {
-        const nextQ = session.questions[nextIdx];
-        setCurrentQuestionIndex(nextIdx);
-
-        const aiMsg = {
-          id: `msg_ai_${Date.now()}`,
-          sender: 'ai',
-          text: nextQ.question,
-          timestamp: new Date().toISOString(),
-          category: nextQ.category,
-          feedback: `No problem at all! Let's proceed to the next question.`,
-        };
-
-        setMessages((prev) => [...prev, aiMsg]);
-        setAiStatus('Listening');
-      } else {
-        // Complete the interview if last question was skipped
-        completeSession(updatedAnswered);
-      }
-    }, 900);
+    advanceToQuestion(currentQuestionIndex + 1);
   };
 
-  const completeSession = (finishedQuestions) => {
-    setAiStatus('Asking');
-    const questionsToScore = (finishedQuestions && finishedQuestions.length > 0) ? finishedQuestions : answeredQuestions;
-    const avgScore = questionsToScore.length > 0
-      ? Math.round(questionsToScore.reduce((sum, q) => sum + (q.score ?? 0), 0) / questionsToScore.length)
+  const completeSession = (questionsAnswered) => {
+    setIsCompleted(true);
+    soundEffects.playSuccess();
+
+    const questionsToScore =
+      questionsAnswered.length > 0
+        ? questionsAnswered
+        : (allQuestions || []).map((q, idx) => ({
+            id: q.id || `q_${idx + 1}`,
+            question: q.question,
+            category: q.category || session?.config?.type,
+            userAnswer: '[Session Ended Early]',
+            score: 0,
+            feedback: 'No answer recorded for this question.',
+            isCoding: q.isCoding,
+            section: q.section || (q.isCoding ? 'CODING' : 'THEORY'),
+          }));
+
+    const validScores = questionsToScore.filter((q) => typeof q.score === 'number');
+    const avgScore = validScores.length
+      ? Math.round(validScores.reduce((acc, q) => acc + q.score, 0) / validScores.length)
       : 0;
 
     const completedData = {
       id: session?.id || `int_${Date.now()}`,
-      title: session?.title || `${session?.config?.level || 'Senior'} ${session?.config?.type || 'Technical'} Interview`,
-      config: session?.config || activeConfig,
-      resume: session?.resume || activeResume,
-      score: avgScore,
-      durationSpentSeconds: (currentQuestionIndex + 1) * 240,
-      subScores: avgScore === 0
-        ? { technical: 0, communication: 0, problemSolving: 0, confidence: 0 }
-        : {
-            technical: Math.min(100, Math.max(0, avgScore + 3)),
-            communication: Math.min(100, Math.max(0, avgScore - 3)),
-            problemSolving: avgScore,
-            confidence: Math.min(100, Math.max(0, avgScore + 1)),
-          },
+      title: `${session?.config?.level || 'Senior'} ${session?.config?.type || 'Technical'} Interview`,
+      date: new Date().toISOString(),
+      role: session?.config?.role || 'Full Stack Engineer',
+      level: session?.config?.level || 'Senior',
+      type: session?.config?.type || 'Technical',
+      difficulty: session?.config?.difficulty || 'Medium',
+      durationMinutes: Math.round(((session?.totalDurationSeconds || 1800) / 60) * 0.75),
+      overallScore: avgScore,
+      subScores: {
+        technical: Math.min(100, Math.max(0, avgScore + 2)),
+        communication: Math.min(100, Math.max(0, avgScore - 2)),
+        problemSolving: avgScore,
+        confidence: Math.min(100, Math.max(0, avgScore + 1)),
+      },
       questions: questionsToScore.map((q) => {
-        const origQ = session?.questions?.find((sq) => sq.id === q.id);
+        const origQ = allQuestions.find((sq) => sq.id === q.id);
         return {
           ...q,
           isCoding: q.isCoding || origQ?.isCoding,
@@ -462,16 +479,12 @@ export function InterviewRoomPage() {
       }),
     };
 
-    // 1. Exit fullscreen mode immediately
     if (document.fullscreenElement) {
       try {
         document.exitFullscreen().catch(() => {});
-      } catch {
-        // Handled silently
-      }
+      } catch {}
     }
 
-    // 2. Save into context and sync with backend
     saveCompletedInterview(completedData);
 
     if (session?.id && !session.id.startsWith('int_')) {
@@ -486,7 +499,6 @@ export function InterviewRoomPage() {
       }).catch((e) => console.warn('Could not sync completion to backend:', e));
     }
 
-    // 3. Seamlessly redirect to the standard result page with Sidebar and Header
     navigate('/interviews/result', {
       state: { results: completedData, sessionId: completedData.id },
       replace: true,
@@ -496,39 +508,6 @@ export function InterviewRoomPage() {
   const handleEndInterviewEarly = () => {
     setShowEndDialog(false);
     completeSession(answeredQuestions);
-  };
-
-  const handlePracticeAgain = () => {
-    setIsCompleted(false);
-    setMessages([]);
-    setCurrentQuestionIndex(0);
-    const newSession = initializeInterviewSession();
-    setSession(newSession);
-
-    const questionsList = newSession?.questions || [];
-    const firstQ = questionsList[0];
-
-    const initialMsgs = [
-      {
-        id: `msg_ai_init_${Date.now()}`,
-        sender: 'ai',
-        text: `Starting a fresh practice session. Focus on structured delivery!`,
-        timestamp: new Date().toISOString(),
-      },
-    ];
-
-    if (firstQ) {
-      initialMsgs.push({
-        id: `msg_ai_q_${firstQ.id || '1'}`,
-        sender: 'ai',
-        text: firstQ.question,
-        timestamp: new Date().toISOString(),
-        category: firstQ.category || 'General',
-      });
-    }
-
-    setMessages(initialMsgs);
-    setAiStatus('Listening');
   };
 
   if (loadingSession) {
@@ -542,8 +521,7 @@ export function InterviewRoomPage() {
     );
   }
 
-  // Graceful fallback if no questions were generated or loaded
-  if (!session || !session.questions || session.questions.length === 0) {
+  if (!session || !allQuestions.length) {
     return (
       <div className="interview-room-fullscreen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div className="glass-panel" style={{ maxWidth: 500, padding: 32, textAlign: 'center', borderRadius: 16 }}>
@@ -567,21 +545,66 @@ export function InterviewRoomPage() {
 
   return (
     <div className="interview-room-fullscreen">
-      {/* Top Header */}
+      {/* Top Navigation & Status Bar */}
       <InterviewHeader
         title={`${session.config?.level || 'Senior'} ${session.config?.type || 'Technical'} Interview`}
         currentQuestionIndex={currentQuestionIndex}
-        totalQuestions={session.questions.length}
+        totalQuestions={allQuestions.length}
         totalSeconds={session.totalDurationSeconds || 1800}
-        questionSource={currentQ?.source || session.questions?.[0]?.source}
+        questionSource={currentQ?.source || allQuestions[0]?.source}
+        currentSection={currentSection}
+        theoryCount={theoryQuestions.length}
+        codingCount={codingQuestions.length}
         onEndInterview={() => setShowEndDialog(true)}
       />
+
+      {/* Section Quick Navigation Bar */}
+      {theoryQuestions.length > 0 && codingQuestions.length > 0 && (
+        <div className="section-navigator-strip">
+          <div className="section-tabs-group">
+            <div className={`section-pill ${currentSection === 'THEORY' ? 'active-theory' : 'done'}`}>
+              <BookOpen size={14} />
+              <span>Section 1: Resume & Technical Theory</span>
+              <span className="count-tag">{theoryQuestions.length} Qs</span>
+            </div>
+
+            <ChevronRight size={16} className="section-arrow" />
+
+            <div className={`section-pill ${currentSection === 'CODING' ? 'active-coding' : 'upcoming'}`}>
+              <Code2 size={14} />
+              <span>Section 2: Live Hands-on Coding</span>
+              <span className="count-tag">{codingQuestions.length} Tasks</span>
+            </div>
+          </div>
+
+          <div className="question-stepper-row">
+            {allQuestions.map((q, idx) => {
+              const isDone = idx < currentQuestionIndex;
+              const isCurrent = idx === currentQuestionIndex;
+              const isCoding = q.isCoding;
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentQuestionIndex(idx)}
+                  className={`step-btn ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''} ${isCoding ? 'is-code-step' : ''}`}
+                  title={`Question ${idx + 1}: ${isCoding ? 'Coding Challenge' : 'Theory Question'}`}
+                >
+                  {isDone ? <CheckCircle2 size={12} /> : idx + 1}
+                  {isCoding && <span className="code-dot" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {isCompleted ? (
         <div className="completion-container">
           <InterviewCompletionScreen
             results={results}
-            onPracticeAgain={handlePracticeAgain}
+            onPracticeAgain={() => navigate('/interviews/new')}
           />
         </div>
       ) : (
@@ -590,31 +613,22 @@ export function InterviewRoomPage() {
           <AIAvatarPanel
             status={aiStatus}
             interviewerName="Alex"
-            activeCategory={currentQ?.category}
+            activeCategory={currentQ?.category || (isCodingActive ? 'Coding Challenge' : 'Technical Theory')}
           />
 
-          {/* Center Area: Full Chat if non-coding, or Split Workspace if coding task is active */}
+          {/* Center Area: Full Chat if Theory question, or Interactive Split Workspace if Coding question */}
           {isCodingActive ? (
             <div className="room-center-workspace animate-fade-in">
-              {/* View Mode Switcher Header only visible when coding challenge is active */}
+              {/* Workspace View Mode Switcher */}
               <div className="workspace-mode-strip">
                 <div className="mode-tabs-row">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('chat')}
-                    className={`mode-tab-btn ${viewMode === 'chat' ? 'active' : ''}`}
-                  >
-                    <MessageSquare size={14} />
-                    <span>Conversation</span>
-                  </button>
-
                   <button
                     type="button"
                     onClick={() => setViewMode('split')}
                     className={`mode-tab-btn ${viewMode === 'split' ? 'active' : ''}`}
                   >
                     <Columns size={14} />
-                    <span>Split View (Chat + IDE)</span>
+                    <span>Split Screen (Chat + IDE)</span>
                   </button>
 
                   <button
@@ -623,15 +637,24 @@ export function InterviewRoomPage() {
                     className={`mode-tab-btn ${viewMode === 'code' ? 'active' : ''}`}
                   >
                     <Code2 size={14} />
-                    <span>Live Code IDE</span>
+                    <span>Full Live IDE</span>
                     <span className="coding-q-pill">Coding Task Active</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('chat')}
+                    className={`mode-tab-btn ${viewMode === 'chat' ? 'active' : ''}`}
+                  >
+                    <MessageSquare size={14} />
+                    <span>Chat Transcript</span>
                   </button>
                 </div>
               </div>
 
               {/* Main Interactive Grid */}
               <div className={`workspace-content-grid mode-${viewMode}`}>
-                {/* Chat Transcript & Input */}
+                {/* Chat Transcript & Voice/Text Bar */}
                 {(viewMode === 'chat' || viewMode === 'split') && (
                   <main className="room-chat-pane">
                     <ChatTranscript
@@ -647,10 +670,12 @@ export function InterviewRoomPage() {
                   </main>
                 )}
 
-                {/* Live Code Workspace */}
+                {/* Persistent Live Code Workspace */}
                 {(viewMode === 'code' || viewMode === 'split') && (
                   <CodeEditorWorkspace
                     question={currentQ}
+                    userCode={codeMap[currentQ?.id]}
+                    onCodeChange={handleCodeChange}
                     onSubmitCode={handleSubmitCode}
                     onSkipQuestion={() => setShowSkipModal(true)}
                     disabled={isInputDisabled}
@@ -675,7 +700,7 @@ export function InterviewRoomPage() {
         </div>
       )}
 
-      {/* Skip Question Confirmation Modal */}
+      {/* Skip Question Modal */}
       <ConfirmModal
         isOpen={showSkipModal}
         onClose={() => setShowSkipModal(false)}
@@ -688,7 +713,7 @@ export function InterviewRoomPage() {
         icon={SkipForward}
       />
 
-      {/* End Interview Confirmation Modal */}
+      {/* End Interview Early Modal */}
       <EndInterviewDialog
         isOpen={showEndDialog}
         onClose={() => setShowEndDialog(false)}

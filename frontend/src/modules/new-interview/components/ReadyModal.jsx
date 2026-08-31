@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, FileText, CheckCircle2, Clock, Target, Layers, ArrowRight } from 'lucide-react';
+import { Sparkles, FileText, Clock, Target, Layers, ArrowRight } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { Button } from '../../../shared/components/ui/Button';
 import { useInterview } from '../../../shared/context/InterviewContext';
@@ -8,12 +8,12 @@ import { useToast } from '../../../shared/context/ToastContext';
 import './NewInterview.css';
 
 export function ReadyModal({ isOpen, onClose, onReviewSettings }) {
-  const { activeConfig, activeResume, initializeInterviewSession } = useInterview();
+  const { activeConfig, activeResume, currentSession, initializeInterviewSession } = useInterview();
   const navigate = useNavigate();
   const toast = useToast();
 
   const handleStartInterview = async () => {
-    const session = initializeInterviewSession();
+    const session = currentSession || initializeInterviewSession();
     toast.success('Launching AI Interview Session...');
 
     // Trigger browser fullscreen immediately on user gesture
@@ -30,7 +30,7 @@ export function ReadyModal({ isOpen, onClose, onReviewSettings }) {
     }
 
     onClose();
-    const interviewUrl = `/interview-room?sessionId=${session.id}`;
+    const interviewUrl = `/interview-room?id=${session.id}`;
     navigate(interviewUrl);
   };
 

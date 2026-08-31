@@ -278,9 +278,13 @@ export class InterviewService {
    * Retrieves list of all unique previously uploaded resumes with metadata (scoped to user)
    */
   async getPreviouslyUploadedResumes(userId?: string) {
+    if (!userId) {
+      return [];
+    }
+
     const sessions = await this.prisma.interviewSession.findMany({
       where: {
-        ...(userId ? { userId } : {}),
+        userId,
         originalFileName: { not: '' },
       },
       orderBy: { createdAt: 'desc' },
@@ -328,7 +332,6 @@ export class InterviewService {
           uploadedAt: s.createdAt,
           targetRole: s.targetRole,
           textSnippet: snippet,
-          fileUrl: `/api/interviews/resumes/${s.id}/file`,
         });
       }
     }
@@ -337,15 +340,19 @@ export class InterviewService {
   }
 
   /**
-   * Streams/serves the resume file for preview or download
+   * Streams/serves the resume file for preview or download (strictly scoped to owner)
    */
-  async getResumeFile(sessionId: string): Promise<{ fileStream: fsSync.ReadStream; mimeType: string; fileName: string }> {
+  async getResumeFile(sessionId: string, userId?: string): Promise<{ fileStream: fsSync.ReadStream; mimeType: string; fileName: string }> {
     const session = await this.prisma.interviewSession.findUnique({
       where: { id: sessionId },
     });
 
     if (!session) {
       throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    if (userId && session.userId && session.userId !== userId) {
+      throw new ForbiddenException('You do not have permission to access this resume document');
     }
 
     const absPath = path.join(process.cwd(), session.storedFilePath);
@@ -507,12 +514,16 @@ export class InterviewService {
   }
 
   /**
-   * Lists all interview sessions from the database (filtered by logged-in user)
+   * Lists all interview sessions from the database (strictly filtered by logged-in user)
    */
   async getAllSessions(userId?: string) {
+    if (!userId) {
+      return [];
+    }
+
     return this.prisma.interviewSession.findMany({
       where: {
-        ...(userId ? { userId } : {}),
+        userId,
       },
       orderBy: { createdAt: 'desc' },
     });

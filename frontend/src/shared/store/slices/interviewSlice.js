@@ -1,28 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import * as api from '../../utils/apiClient';
 
-const STORAGE_KEY = 'interview_ai_history';
-const ACTIVE_CONFIG_KEY = 'interview_ai_active_config';
-const ACTIVE_RESUME_KEY = 'interview_ai_active_resume';
-
-const getStored = (key, fallback) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const initialInterviews = getStored(STORAGE_KEY, []);
-const initialConfig = getStored(ACTIVE_CONFIG_KEY, {
+const initialDefaultConfig = {
   type: 'Technical',
   role: 'Full Stack Engineer',
   level: 'Senior',
   difficulty: 'Medium',
   duration: 30,
-});
-const initialResume = getStored(ACTIVE_RESUME_KEY, null);
+};
 
 export const fetchBackendSessions = createAsyncThunk(
   'interview/fetchBackendSessions',
@@ -68,9 +53,9 @@ export const deleteInterviewSession = createAsyncThunk(
 const interviewSlice = createSlice({
   name: 'interview',
   initialState: {
-    interviews: initialInterviews,
-    activeConfig: initialConfig,
-    activeResume: initialResume,
+    interviews: [], // Strictly initialized per user via fetchBackendSessions
+    activeConfig: initialDefaultConfig,
+    activeResume: null,
     currentSession: null,
     activeStep: 'upload', // 'upload' | 'config' | 'pipeline' | 'ready'
     isLoadingBackend: false,
@@ -79,29 +64,15 @@ const interviewSlice = createSlice({
   reducers: {
     setActiveConfig: (state, action) => {
       state.activeConfig = { ...state.activeConfig, ...action.payload };
-      localStorage.setItem(ACTIVE_CONFIG_KEY, JSON.stringify(state.activeConfig));
     },
     resetActiveConfig: (state) => {
-      state.activeConfig = {
-        type: 'Technical',
-        role: 'Full Stack Engineer',
-        level: 'Senior',
-        difficulty: 'Medium',
-        duration: 30,
-      };
-      localStorage.setItem(ACTIVE_CONFIG_KEY, JSON.stringify(state.activeConfig));
+      state.activeConfig = { ...initialDefaultConfig };
     },
     setActiveResume: (state, action) => {
       state.activeResume = action.payload;
-      if (action.payload) {
-        localStorage.setItem(ACTIVE_RESUME_KEY, JSON.stringify(action.payload));
-      } else {
-        localStorage.removeItem(ACTIVE_RESUME_KEY);
-      }
     },
     clearActiveResume: (state) => {
       state.activeResume = null;
-      localStorage.removeItem(ACTIVE_RESUME_KEY);
     },
     setActiveStep: (state, action) => {
       state.activeStep = action.payload;
@@ -109,7 +80,6 @@ const interviewSlice = createSlice({
     resetWizard: (state) => {
       state.activeStep = 'upload';
       state.activeResume = null;
-      localStorage.removeItem(ACTIVE_RESUME_KEY);
     },
     setCurrentSession: (state, action) => {
       state.currentSession = action.payload;
@@ -163,7 +133,15 @@ const interviewSlice = createSlice({
       };
 
       state.interviews = [newInterview, ...state.interviews.filter((i) => i.id !== newInterview.id)];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.interviews));
+    },
+    resetInterviewState: (state) => {
+      state.interviews = [];
+      state.activeConfig = { ...initialDefaultConfig };
+      state.activeResume = null;
+      state.currentSession = null;
+      state.activeStep = 'upload';
+      state.isLoadingBackend = false;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -175,10 +153,7 @@ const interviewSlice = createSlice({
       })
       .addCase(fetchBackendSessions.fulfilled, (state, action) => {
         state.isLoadingBackend = false;
-        if (action.payload && action.payload.length > 0) {
-          state.interviews = action.payload;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.interviews));
-        }
+        state.interviews = action.payload || [];
       })
       .addCase(fetchBackendSessions.rejected, (state, action) => {
         state.isLoadingBackend = false;
@@ -188,7 +163,6 @@ const interviewSlice = createSlice({
     // deleteInterviewSession
     builder.addCase(deleteInterviewSession.fulfilled, (state, action) => {
       state.interviews = state.interviews.filter((i) => i.id !== action.payload);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.interviews));
     });
   },
 });
@@ -204,6 +178,7 @@ export const {
   clearCurrentSession,
   initializeInterviewSession,
   saveCompletedInterview,
+  resetInterviewState,
 } = interviewSlice.actions;
 
 export default interviewSlice.reducer;

@@ -16,6 +16,7 @@ import {
   saveCompletedInterview as saveInterviewAction,
   deleteInterviewSession,
   fetchBackendSessions as fetchSessionsThunk,
+  resetInterviewState,
 } from './slices/interviewSlice';
 import { addToast, removeToast } from './slices/toastSlice';
 
@@ -167,6 +168,10 @@ export function useInterview() {
     await dispatch(fetchSessionsThunk());
   }, [dispatch]);
 
+  const resetState = useCallback(() => {
+    dispatch(resetInterviewState());
+  }, [dispatch]);
+
   return {
     interviews,
     activeConfig,
@@ -180,6 +185,7 @@ export function useInterview() {
     getInterviewById,
     deleteInterview,
     fetchBackendSessions,
+    resetState,
     isLoadingBackend,
   };
 }

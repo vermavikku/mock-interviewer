@@ -408,7 +408,7 @@
 }
 
 .workspace-content-grid.mode-split {
-  grid-template-columns: 1fr 1.15fr;
+  grid-template-columns: 0.85fr 1.15fr;
 }
 
 .workspace-content-grid.mode-chat {
@@ -1112,3 +1112,118 @@
     align-items: flex-start;
   }
 }
+
+/* Section Quick Navigation Bar */
+.section-navigator-strip {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  z-index: 40;
+}
+
+.section-tabs-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  transition: all var(--trans-fast);
+}
+
+.section-pill .count-tag {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.section-pill.active-theory {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.section-pill.active-coding {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #818cf8;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+}
+
+.section-arrow {
+  color: var(--text-dim);
+}
+
+.question-stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.step-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--trans-fast);
+}
+
+.step-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--text-primary);
+}
+
+.step-btn.current {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+}
+
+.step-btn.done {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.step-btn.is-code-step {
+  border-radius: 6px;
+}
+
+.step-btn .code-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #818cf8;
+}
+

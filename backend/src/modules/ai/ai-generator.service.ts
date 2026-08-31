@@ -6,6 +6,12 @@ import { SessionQuestion, SessionEvaluation } from '../session-storage/session-j
 import { getErrorMessage } from '../../shared/utils/error.util';
 import { parseAiJson } from '../../shared/utils/json.util';
 
+export interface QuestionCounts {
+  codingCount: number;
+  theoryCount: number;
+  totalCount: number;
+}
+
 @Injectable()
 export class AiGeneratorService {
   private readonly logger = new Logger(AiGeneratorService.name);
@@ -28,8 +34,10 @@ export class AiGeneratorService {
   }
 
   /**
-   * Generates tailored interview questions based on raw extracted resume text and interview configuration
-   * (Direct Google Gemini AI call — fallbacks disabled for testing)
+   * Generates tailored interview questions based on raw extracted resume text and interview configuration.
+   * For Technical interviews, it structures questions into two sections:
+   * 1. Section 1: Theory Questions (Resume & Technical Architecture)
+   * 2. Section 2: Live Hands-on Coding Challenges (Algorithms & Data Structures in IDE)
    */
   async generateQuestions(params: {
     rawResumeText: string;
@@ -41,21 +49,11 @@ export class AiGeneratorService {
     targetDurationMin?: number;
   }): Promise<SessionQuestion[]> {
     const isTechnical = params.interviewType.toLowerCase().includes('tech');
+    const counts = this.computeQuestionCounts(params.targetDurationMin, isTechnical);
 
-    // Coding Track: for Technical rounds where the resume shows coding
-    // experience, the question count is derived from the interview duration
-    // (15min -> 2, 30min -> 4, 45min -> 6, 60min -> 8) and every question is
-    // a hands-on coding challenge rendered in the interview room IDE.
-    const codingTrack = isTechnical && this.hasCodingExperience(params.rawResumeText);
-    const count = codingTrack
-      ? this.computeCodingCount(params.targetDurationMin)
-      : params.questionCount || 5;
-
-    if (codingTrack) {
-      this.logger.log(
-        `🧑‍💻 [Coding Track] Resume shows coding experience — generating ${count} live coding challenges for a ${params.targetDurationMin || 30} min Technical interview`,
-      );
-    }
+    this.logger.log(
+      `🎯 [Question Breakdown] Duration: ${params.targetDurationMin || 30} min | Technical: ${isTechnical} | Theory Questions: ${counts.theoryCount} | Coding Challenges: ${counts.codingCount} | Total: ${counts.totalCount}`,
+    );
 
     if (!this.apiKey) {
       throw new Error(
@@ -64,18 +62,13 @@ export class AiGeneratorService {
     }
 
     this.logger.log(`🤖 [Direct AI Call] Calling Google Gemini (${this.modelName}) to generate questions...`);
-    const geminiQuestions = await this.generateWithGemini(params, count, codingTrack);
+    const geminiQuestions = await this.generateWithGemini(params, counts);
     this.logger.log(`🤖 [Google Gemini AI] Successfully generated ${geminiQuestions.length} tailored questions using model "${this.modelName}"`);
     return geminiQuestions;
-
-    /* --- FALLBACK DISABLED FOR TESTING ---
-    return this.generateLocally(params, count);
-    ---------------------------------------- */
   }
 
   /**
-   * Detects whether the resume mentions coding-related experience
-   * (programming languages, frameworks, or engineering roles).
+   * Detects whether the resume mentions coding-related experience.
    */
   private hasCodingExperience(rawResumeText: string): boolean {
     if (!rawResumeText) return false;
@@ -93,13 +86,33 @@ export class AiGeneratorService {
   }
 
   /**
-   * Maps the target interview duration to the number of live coding questions:
-   * 15 min -> 2, 30 min -> 4, 45 min -> 6, 60 min -> 8 (~7.5 min per question).
+   * Maps interview duration to the required question counts:
+   * - 15 min: 2 Coding + 2 Theory (Total 4)
+   * - 30 min: 4 Coding + 3 Theory (Total 7)
+   * - 45 min: 6 Coding + 4 Theory (Total 10)
+   * - 60 min: 8 Coding + 4 Theory (Total 12)
    */
-  private computeCodingCount(targetDurationMin?: number): number {
-    const durationMap: Record<number, number> = { 15: 2, 30: 4, 45: 6, 60: 8 };
+  public computeQuestionCounts(targetDurationMin?: number, isTechnical = true): QuestionCounts {
     const duration = Number(targetDurationMin) || 30;
-    return durationMap[duration] ?? Math.min(8, Math.max(1, Math.round(duration / 7.5)));
+
+    if (!isTechnical) {
+      const nonTechMap: Record<number, number> = { 15: 4, 30: 6, 45: 8, 60: 10 };
+      const total = nonTechMap[duration] || 6;
+      return { codingCount: 0, theoryCount: total, totalCount: total };
+    }
+
+    // Technical Interview Mapping:
+    const codingMap: Record<number, number> = { 15: 2, 30: 4, 45: 6, 60: 8 };
+    const theoryMap: Record<number, number> = { 15: 2, 30: 3, 45: 4, 60: 4 };
+
+    const codingCount = codingMap[duration] ?? (duration <= 20 ? 2 : duration <= 35 ? 4 : duration <= 50 ? 6 : 8);
+    const theoryCount = theoryMap[duration] ?? (duration <= 20 ? 2 : duration <= 35 ? 3 : 4);
+
+    return {
+      codingCount,
+      theoryCount,
+      totalCount: codingCount + theoryCount,
+    };
   }
 
   private async generateWithGemini(
@@ -110,64 +123,78 @@ export class AiGeneratorService {
       difficulty: string;
       interviewType: string;
     },
-    count: number,
-    codingTrack = false,
+    counts: QuestionCounts,
   ): Promise<SessionQuestion[]> {
+    const { theoryCount, codingCount, totalCount } = counts;
     const isTechnical = params.interviewType.toLowerCase().includes('tech');
 
-    const codingInstruction = codingTrack
-      ? `3. LIVE CODING ROUND: The candidate's resume confirms hands-on coding experience, so ALL ${count} questions must be practical, hands-on CODING CHALLENGE questions ("isCoding": true) tailored to their primary programming language from the resume. Space the challenges so they fit a ~${Math.round(count * 7.5)} minute round (roughly 7-8 minutes per challenge, ascending difficulty). For every question provide "codingDetails" with "language", "starterCode" (a clean function signature scaffold with JSDoc comments), "testCases" (at least 3, including edge cases), and "idealSolutionCode" (an optimal, well-commented reference solution). Use the schema shown for the second (coding) object for EVERY entry in the array.`
-      : isTechnical
-        ? `3. For this Technical interview: Include 1 or 2 practical, hands-on CODING CHALLENGE questions (with "isCoding": true) tailored to their primary programming language from the resume. For coding challenges, provide "codingDetails" with "language", "starterCode", "testCases", and "idealSolutionCode". For conceptual/architectural questions, set "isCoding": false.`
-        : `3. For non-technical questions, set "isCoding": false.`;
-
     const prompt = `
-You are an expert technical bar-raiser hiring manager conducting a ${params.seniorityLevel} level ${params.interviewType} interview for the position of "${params.targetRole}" (Difficulty: ${params.difficulty}).
+You are an elite principal software architect and bar-raising technical hiring manager conducting a ${params.seniorityLevel} level ${params.interviewType} interview for the role of "${params.targetRole}" (Difficulty: ${params.difficulty}).
 
 Candidate Resume Extract:
 """
 ${params.rawResumeText.slice(0, 8000)}
 """
 
-JSON-SAFETY REQUIREMENT (CRITICAL): All code strings ("starterCode", "idealSolutionCode", "testCases") MUST be single-line escaped JSON strings — escape every quote (\\"), backslash (\\\\), regex backslash (\\\\s -> \\\\\\\\s), and use \\n for newlines. Never emit raw newlines, tabs, or unescaped backslashes inside string values.
+JSON-SAFETY REQUIREMENT (CRITICAL):
+- All code strings ("starterCode", "idealSolutionCode", "testCases") MUST be single-line escaped JSON strings — escape every quote (\\"), backslash (\\\\), regex backslash (\\\\s -> \\\\\\\\s), and use \\n for newlines.
+- Never emit raw unescaped newlines, tabs, or quotes inside string values.
 
-Instructions:
-1. Examine the candidate's resume for their primary programming languages (e.g. JavaScript, TypeScript, Python, Java, Go, C++, SQL, C#) and technical domain experience.
-2. Generate exactly ${count} relevant, tailored interview questions.
-${codingInstruction}
-4. For EACH question, provide a comprehensive, best-practice "idealAnswer" that an elite candidate would deliver.
+INTERVIEW STRUCTURE REQUIREMENTS:
+Generate a JSON array of EXACTLY ${totalCount} questions structured into two sequential sections:
 
-Respond ONLY with a valid JSON array of objects with the following schema:
+SECTION 1: TECHNICAL & RESUME THEORY QUESTIONS (Exactly ${theoryCount} questions)
+- These questions must be directly derived from the technologies, libraries, past projects, system architectures, databases, and trade-offs explicitly mentioned in the candidate's resume.
+- Focus areas: High-scale architecture, database query optimization & indexing, microservices resilience, framework internals, security, caching strategies, and incident RCA.
+- For all Section 1 questions: set "section": "THEORY" and "isCoding": false.
+
+SECTION 2: LIVE HANDS-ON CODING CHALLENGES (Exactly ${codingCount} questions)
+- These questions must be practical coding/algorithm problems tailored to the candidate's primary programming language identified from their resume (e.g., JavaScript/TypeScript, Python, Java, Go, C++).
+- Each challenge must include:
+  * "section": "CODING"
+  * "isCoding": true
+  * "codingDetails" containing:
+    - "language": the identified programming language (lowercase, e.g. "javascript", "typescript", "python")
+    - "starterCode": clean function signature scaffold with JSDoc/type doc comments
+    - "testCases": array of at least 3 test cases including boundary/edge cases (e.g. [{"input": "...", "expected": "..."}])
+    - "idealSolutionCode": an optimal, well-commented reference solution with O(N) or best complexity
+- Provide comprehensive "idealAnswer" and "expectedKeyPoints" for all questions.
+
+Respond ONLY with a valid JSON array of objects adhering to this schema:
 [
+  // Theory Question Example (Section 1)
   {
     "id": "q1",
     "questionNumber": 1,
-    "question": "Question or problem statement here...",
-    "category": "Technical Architecture | System Scalability | Data Structures & Algorithms | Database & SQL | Incident Response",
-    "difficulty": "${params.difficulty}",
+    "section": "THEORY",
     "isCoding": false,
-    "expectedKeyPoints": ["Point 1", "Point 2", "Point 3", "Point 4"],
-    "idealAnswer": "Comprehensive model answer explaining core architecture, patterns, tradeoffs, and best practices..."
+    "category": "Technical Architecture",
+    "difficulty": "${params.difficulty}",
+    "question": "Based on your experience with [Specific Technology from Resume]...",
+    "expectedKeyPoints": ["Key Point 1", "Key Point 2", "Key Point 3"],
+    "idealAnswer": "Comprehensive technical answer explaining architecture, trade-offs, and scalability..."
   },
+  // Coding Challenge Example (Section 2)
   {
-    "id": "q2",
-    "questionNumber": 2,
-    "question": "Write a function that solves [specific algorithmic or data structure problem]...",
+    "id": "q${theoryCount + 1}",
+    "questionNumber": ${theoryCount + 1},
+    "section": "CODING",
+    "isCoding": true,
     "category": "Data Structures & Algorithms",
     "difficulty": "${params.difficulty}",
-    "isCoding": true,
+    "question": "Implement a function that solves [Specific Algorithmic/Practical Problem]...",
     "codingDetails": {
       "language": "javascript",
       "starterCode": "/**\\n * @param {any} input\\n * @return {any}\\n */\\nfunction solution(input) {\\n  // Your code here\\n}\\n",
       "testCases": [
-        { "input": "input_val_1", "expected": "expected_val_1" },
-        { "input": "input_val_2", "expected": "expected_val_2" },
-        { "input": "input_val_3", "expected": "expected_val_3" }
+        { "input": "[1, 2, 3]", "expected": "6" },
+        { "input": "[]", "expected": "0" },
+        { "input": "[-1, 5, 2]", "expected": "6" }
       ],
-      "idealSolutionCode": "function solution(input) {\\n  // Optimal O(N) implementation\\n}"
+      "idealSolutionCode": "function solution(input) {\\n  if (!Array.isArray(input) || input.length === 0) return 0;\\n  return input.reduce((a, b) => a + b, 0);\\n}"
     },
-    "expectedKeyPoints": ["Optimal Time and Space Complexity", "Handles edge cases", "Clean modular structure"],
-    "idealAnswer": "Explanation of the algorithm, optimal time/space complexity analysis, and edge case breakdown..."
+    "expectedKeyPoints": ["Optimal Time & Space Complexity", "Handles edge cases (empty, null, negative values)", "Clean idiomatic code"],
+    "idealAnswer": "Optimal approach analysis, time and space complexity breakdown O(N), and edge case handling."
   }
 ]
 `;
@@ -185,7 +212,6 @@ Respond ONLY with a valid JSON array of objects with the following schema:
       });
       rawResponseText = response.text || '';
     } else {
-      // Direct REST API fallback
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
       const res = await axios.post(
         url,
@@ -201,128 +227,40 @@ Respond ONLY with a valid JSON array of objects with the following schema:
       rawResponseText = res.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
-    let parsed: any;
-    let cleanJson = rawResponseText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    const cleanJson = rawResponseText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    const parsed = parseAiJson(cleanJson);
+    const questionsArray: any[] = Array.isArray(parsed) ? parsed : parsed.questions || [];
 
-    // Resilient JSON parsing: handles markdown fences, stray backslashes,
-    // invalid escapes from code/regex content, and raw control characters.
-    parsed = parseAiJson(cleanJson);
+    return questionsArray.map((q: any, idx: number) => {
+      const isCoding = Boolean(q.isCoding || q.section === 'CODING');
+      const section: 'THEORY' | 'CODING' = isCoding ? 'CODING' : 'THEORY';
 
-    const questionsArray = Array.isArray(parsed) ? parsed : parsed.questions || [];
-
-    return questionsArray.map((q: any, idx: number) => ({
-      id: `q_${idx + 1}`,
-      questionNumber: idx + 1,
-      question: q.question,
-      category: q.category || params.interviewType,
-      difficulty: q.difficulty || params.difficulty,
-      expectedKeyPoints: q.expectedKeyPoints || [],
-      idealAnswer: q.idealAnswer || 'An ideal response addresses core architecture, scalability bottlenecks, trade-offs, and measurable production impact.',
-      source: 'GOOGLE_GEMINI_AI' as const,
-      model: this.modelName,
-      isFallback: false,
-      isCoding: Boolean(q.isCoding),
-      codingDetails: q.codingDetails || (q.isCoding ? {
-        language: 'javascript',
-        starterCode: 'function solution() {\n  // Write code here\n}',
-        testCases: [],
-        idealSolutionCode: q.idealAnswer,
-      } : undefined),
-    }));
-  }
-
-  private generateLocally(
-    params: {
-      rawResumeText: string;
-      targetRole: string;
-      seniorityLevel: string;
-      difficulty: string;
-      interviewType: string;
-    },
-    count: number,
-  ): SessionQuestion[] {
-    const lowerText = params.rawResumeText.toLowerCase();
-
-    // Extract detected technologies/keywords from raw text
-    const detectedSkills: string[] = [];
-    const techPool = [
-      'react', 'node', 'nestjs', 'typescript', 'javascript', 'docker', 'kubernetes',
-      'aws', 'postgresql', 'mongodb', 'graphql', 'python', 'kafka', 'redis', 'microservices',
-      'ci/cd', 'git', 'linux', 'devops', 'next.js', 'sql', 'prisma', 'rest api',
-    ];
-
-    for (const tech of techPool) {
-      if (lowerText.includes(tech)) {
-        detectedSkills.push(tech.charAt(0).toUpperCase() + tech.slice(1));
-      }
-    }
-
-    const primarySkill = detectedSkills[0] || 'Modern Full Stack Technologies';
-    const secondarySkill = detectedSkills[1] || 'Distributed Microservices';
-    const dbSkill = detectedSkills.find((s) => ['Postgresql', 'Mongodb', 'Redis', 'Sql'].includes(s)) || 'Relational & NoSQL Databases';
-
-    const questionTemplates: Array<{ question: string; category: string; keyPoints: string[]; idealAnswer: string }> = [
-      {
-        question: `Based on your experience with ${primarySkill} in your resume, can you walk me through the most complex challenge you solved and the architectural decisions you made?`,
-        category: 'Technical Architecture',
-        keyPoints: ['Core problem statement & constraints', 'Architecture diagram / trade-offs', 'Bottlenecks identified & mitigated', 'Measurable production SLA outcome'],
-        idealAnswer: `An exemplary answer breaks down the challenge into 4 stages:
-1. Context & Scale: Clearly define baseline metrics (e.g. 50,000 req/sec peak, p99 latency spikes exceeding 1200ms, or database locking under concurrent writes).
-2. Architecture Design: Explain the decoupling strategy (e.g., adopting asynchronous message queues with BullMQ/Kafka, separating read/write paths with CQRS, and implementing idempotent worker consumers).
-3. Trade-offs: Compare alternatives (e.g. why Redis distributed locking was selected over optimistic database locking due to write contention).
-4. Outcome: Provide quantifiable results (e.g. reduced p99 latency by 78% down to 65ms, eliminated deadlock incidents, and achieved 99.99% uptime).`,
-      },
-      {
-        question: `When building high-throughput services with ${secondarySkill}, how do you ensure zero data loss, fault tolerance, and proper telemetry/observability?`,
-        category: 'System Scalability',
-        keyPoints: ['Idempotency handling & de-duplication', 'Circuit breaker & retry policies with backoff', 'Distributed tracing (OpenTelemetry/APM)', 'Dead-letter queues (DLQ) & alerts'],
-        idealAnswer: `An elite response covers resiliency at all layers:
-- Idempotency: Use unique event/transaction IDs with distributed Redis locks and unique database constraints to guarantee exactly-once processing semantics.
-- Fault Tolerance: Implement exponential backoff with jitter and circuit breakers (e.g. using Cockatiel/Opossum) to prevent cascading microservice outages.
-- Observability: Instrument OpenTelemetry distributed tracing with correlation IDs propagated across HTTP headers and queues, monitoring RED (Rate, Errors, Duration) metrics with Prometheus and Grafana.
-- Recovery: Route poisoned messages to Dead-Letter Queues (DLQ) with automated alerting and reprocessing tooling.`,
-      },
-      {
-        question: `How do you structure database schemas, query indexing, and caching layers with ${dbSkill} to handle sudden traffic spikes?`,
-        category: 'Database & Data Access',
-        keyPoints: ['Index optimization (B-tree, composite, GIN)', 'Cache invalidation strategies & cache-aside', 'Read replicas / Connection pooling (PgBouncer)', 'Transaction isolation & deadlock mitigation'],
-        idealAnswer: `An ideal answer addresses:
-1. Indexing Strategy: Analyze execution plans with EXPLAIN ANALYZE, creating composite indexes aligned with WHERE and ORDER BY cardinality, and partial indexes for active statuses.
-2. Caching Layer: Implement a Cache-Aside pattern with Redis, setting jittered TTLs and mutex locks to prevent cache stampedes (dogpiling) during flash spikes.
-3. Connection & Scale: Deploy PgBouncer in transaction-pooling mode to prevent connection exhaustion, utilizing read replicas with round-robin load balancing for heavy read traffic.`,
-      },
-      {
-        question: `As a ${params.seniorityLevel} ${params.targetRole}, how do you approach technical trade-offs between speed of delivery and architectural purity when mentoring teammates?`,
-        category: 'Leadership & Pragmatism',
-        keyPoints: ['Pragmatic technical debt management', 'Architecture Decision Records (ADRs)', 'Constructive code review culture', 'Mentorship & continuous knowledge sharing'],
-        idealAnswer: `A strong answer demonstrates mature engineering leadership:
-- Pragmatic Technical Debt: Acknowledge that deliberate technical debt is sometimes acceptable for business validation, provided it is documented with ADRs (Architectural Decision Records) and prioritized on the tech roadmap.
-- Code Review Culture: Foster blameless, pedagogical code reviews that emphasize architecture, testing boundaries, and readability rather than subjective nitpicks.
-- Mentorship: Pair program with junior and mid-level engineers on complex architectural patterns to foster autonomy and shared code ownership.`,
-      },
-      {
-        question: `Can you describe a production incident you diagnosed and resolved? What post-mortem actions did you implement to prevent recurrence?`,
-        category: 'Incident Response & Reliability',
-        keyPoints: ['Root cause analysis (RCA)', 'Immediate mitigation vs long-term fix', 'Blameless post-mortem & action items', 'Automated regression guards & chaos testing'],
-        idealAnswer: `An outstanding response follows a structured post-mortem framework:
-1. Incident Triage: Rapid detection via APM latency anomaly alerts, initiating an incident bridge and rolling back or enabling circuit breakers to stabilize traffic immediately.
-2. Root Cause Analysis (5 Whys): Tracing the failure (e.g. unindexed foreign key causing table locks during bulk deletes).
-3. Preventive Actions: Implementing automated linting/migration checks in CI/CD, adding synthetic smoke tests, and scheduling blameless post-mortems with measurable SLAs.`,
-      },
-    ];
-
-    return questionTemplates.slice(0, count).map((t, idx) => ({
-      id: `q_${idx + 1}`,
-      questionNumber: idx + 1,
-      question: t.question,
-      category: t.category,
-      difficulty: params.difficulty,
-      expectedKeyPoints: t.keyPoints,
-      idealAnswer: t.idealAnswer,
-      source: 'LOCAL_FALLBACK' as const,
-      model: 'SmartLocalGenerator',
-      isFallback: true,
-    }));
+      return {
+        id: `q_${idx + 1}`,
+        questionNumber: idx + 1,
+        question: q.question,
+        section,
+        category: q.category || (isCoding ? 'Data Structures & Algorithms' : params.interviewType),
+        difficulty: q.difficulty || params.difficulty,
+        expectedKeyPoints: q.expectedKeyPoints || [],
+        idealAnswer: q.idealAnswer || 'An ideal response addresses core architecture, scalability bottlenecks, trade-offs, and measurable production impact.',
+        source: 'GOOGLE_GEMINI_AI' as const,
+        model: this.modelName,
+        isFallback: false,
+        isCoding,
+        codingDetails: isCoding
+          ? q.codingDetails || {
+              language: 'javascript',
+              starterCode: 'function solution() {\n  // Write your code here\n}',
+              testCases: [
+                { input: 'input1', expected: 'output1' },
+                { input: 'input2', expected: 'output2' },
+              ],
+              idealSolutionCode: q.idealAnswer,
+            }
+          : undefined,
+      };
+    });
   }
 
   /**
@@ -417,31 +355,6 @@ Respond ONLY in valid JSON format:
       score: Math.min(100, Math.max(0, Number(parsed.score) || 0)),
       feedback: parsed.feedback || 'Answer evaluated based on technical depth and key criteria.',
     };
-
-    /* --- LOCAL HEURISTIC EVALUATION FALLBACK DISABLED FOR TESTING ---
-    const wordCount = rawAnswer.split(/\s+/).filter(Boolean).length;
-    if (wordCount < 15) {
-      return {
-        score: 30,
-        feedback: 'Your answer is very brief. Try articulating concrete architectural patterns, trade-offs, and measurable outcomes.',
-      };
-    } else if (wordCount < 40) {
-      return {
-        score: 65,
-        feedback: 'Good start covering high-level concepts, but needs deeper technical depth and specific tooling examples.',
-      };
-    } else if (wordCount < 90) {
-      return {
-        score: 82,
-        feedback: 'Solid, well-structured explanation! You covered the core principles and highlighted architectural considerations.',
-      };
-    }
-
-    return {
-      score: 90,
-      feedback: 'Comprehensive and thorough answer demonstrating deep technical domain knowledge and clear trade-off evaluation.',
-    };
-    ----------------------------------------------------------------- */
   }
 
   /**

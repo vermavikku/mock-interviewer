@@ -65,6 +65,7 @@ export function NewInterviewPage() {
     } catch (err) {
       toast.error(`Session creation failed: ${err.message}`);
       setActiveSessionId(null);
+      setCurrentStep(2); // Return to upload step so candidate can retry
     } finally {
       setIsSubmitting(false);
     }
@@ -97,6 +98,12 @@ export function NewInterviewPage() {
             category: q.category,
             difficulty: q.difficulty,
             expectedKeyPoints: q.expectedKeyPoints,
+            idealAnswer: q.idealAnswer,
+            isCoding: Boolean(q.isCoding || q.section === 'CODING'),
+            section: q.section || (q.isCoding ? 'CODING' : 'THEORY'),
+            codingDetails: q.codingDetails,
+            source: q.source,
+            model: q.model,
           })),
           totalDurationSeconds: (sessionPayload.targetDurationMin || 30) * 60,
           createdAt: sessionPayload.createdAt,
@@ -206,6 +213,7 @@ export function NewInterviewPage() {
       {currentStep === 3 && (
         <ResumeProcessingLoader
           sessionId={activeSessionId}
+          isUploading={isSubmitting}
           onComplete={handleProcessingComplete}
           onError={(err) => toast.error(err)}
         />

@@ -35,6 +35,7 @@ export interface SessionQuestion {
   model?: string;
   isFallback?: boolean;
   isCoding?: boolean;
+  section?: 'THEORY' | 'CODING';
   codingDetails?: {
     language?: string;
     starterCode?: string;

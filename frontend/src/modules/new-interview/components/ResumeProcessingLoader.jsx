@@ -4,30 +4,29 @@ import * as api from '../../../shared/utils/apiClient';
 import './NewInterview.css';
 
 export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
+  // Step indices:
+  // 0: Upload complete / PENDING in BullMQ queue
+  // 1: CONVERTING_DOC
+  // 2: EXTRACTING_OCR
+  // 3: GENERATING_QUESTIONS
+  // 4: READY (all complete)
   const [currentStep, setCurrentStep] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
   const stages = [
     { title: 'Resume uploaded & verified by NestJS Gateway', key: 'UPLOADED' },
     { title: 'Converting document to high-res page images (MuPDF + Sharp)', key: 'CONVERTING' },
     { title: 'Extracting raw text per page (Tesseract.js OCR workers)', key: 'OCR' },
-    { title: 'Synthesizing career history & generating questions (Google Gemini 3.7 / Flash)', key: 'GEMINI' },
+    { title: 'Synthesizing career history & generating questions (Google Gemini AI)', key: 'GEMINI' },
     { title: 'Personalized AI interview session ready in BullMQ', key: 'READY' },
   ];
 
   useEffect(() => {
+    // If we don't have a sessionId yet, we are in the initial file upload phase
     if (!sessionId) {
-      // Fallback timer simulation if offline
-      let step = 0;
-      const interval = setInterval(() => {
-        step += 1;
-        setCurrentStep(step);
-        if (step >= stages.length) {
-          clearInterval(interval);
-          setTimeout(() => onComplete && onComplete(), 500);
-        }
-      }, 900);
-      return () => clearInterval(interval);
+      setCurrentStep(0);
+      return;
     }
 
     let isSubscribed = true;
@@ -51,25 +50,27 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
           setCurrentStep(3);
         } else if (status === 'READY') {
           setCurrentStep(4);
-          clearInterval(pollInterval);
+          setIsCompleted(true);
+          if (pollInterval) clearInterval(pollInterval);
+
           setTimeout(() => {
             if (isSubscribed && onComplete) {
               onComplete(sessionId);
             }
           }, 600);
         } else if (status === 'FAILED') {
-          clearInterval(pollInterval);
-          setErrorMessage(data.errorMessage || 'Session processing failed.');
-          if (onError) onError(data.errorMessage);
+          if (pollInterval) clearInterval(pollInterval);
+          setErrorMessage(data.errorMessage || 'Session processing failed in background worker.');
+          if (onError) onError(data.errorMessage || 'Session processing failed');
         }
       } catch (err) {
         console.warn('Polling status warning:', err.message);
       }
     };
 
-    // Poll every 1000ms
+    // Immediate initial check, then poll every 1000ms
     pollStatus();
-    pollInterval = setInterval(pollStatus, 1200);
+    pollInterval = setInterval(pollStatus, 1000);
 
     return () => {
       isSubscribed = false;
@@ -105,9 +106,9 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
       {/* Stages List */}
       <div className="stages-list">
         {stages.map((stage, idx) => {
-          const isDone = idx < currentStep || (currentStep === 4 && idx === 4);
-          const isCurrent = idx === currentStep && currentStep !== 4;
-          const isPending = idx > currentStep;
+          const isDone = isCompleted || idx < currentStep;
+          const isCurrent = !isCompleted && idx === currentStep;
+          const isPending = !isCompleted && idx > currentStep;
 
           return (
             <div

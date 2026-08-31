@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Clock, XCircle, Maximize2, Minimize2 } from 'lucide-react';
+import { Sparkles, Clock, XCircle, Maximize2, Minimize2, BookOpen, Code2 } from 'lucide-react';
 import { Button } from '../../../shared/components/ui/Button';
 import { ProgressBar } from '../../../shared/components/ui/ProgressBar';
 import { formatDuration } from '../../../shared/utils/formatters';
@@ -11,13 +11,15 @@ export function InterviewHeader({
   totalQuestions,
   totalSeconds,
   questionSource,
+  currentSection = 'THEORY',
+  theoryCount = 0,
+  codingCount = 0,
   onEndInterview,
 }) {
   const [secondsLeft, setSecondsLeft] = useState(totalSeconds || 1800);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const isGemini = questionSource === 'GOOGLE_GEMINI_AI';
-  const isFallback = questionSource === 'LOCAL_FALLBACK' || !questionSource;
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -82,11 +84,53 @@ export function InterviewHeader({
         </div>
 
         <div className="room-title-center">
-          <h2 className="room-active-title">{title}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+            <h2 className="room-active-title" style={{ margin: 0 }}>{title}</h2>
+            {/* Active Section Indicator Badge */}
+            {currentSection === 'CODING' ? (
+              <span
+                style={{
+                  fontSize: '11px',
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  background: 'rgba(99, 102, 241, 0.2)',
+                  color: '#818cf8',
+                  border: '1px solid rgba(99, 102, 241, 0.4)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                <Code2 size={13} />
+                SECTION 2: LIVE CODING ({codingCount} Tasks)
+              </span>
+            ) : (
+              <span
+                style={{
+                  fontSize: '11px',
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#34d399',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                <BookOpen size={13} />
+                SECTION 1: RESUME & THEORY ({theoryCount} Questions)
+              </span>
+            )}
+          </div>
           <span
             style={{
               fontSize: '11px',
-              padding: '3px 8px',
+              padding: '2px 8px',
               borderRadius: '12px',
               fontWeight: 600,
               background: isGemini ? 'rgba(6, 182, 212, 0.15)' : 'rgba(245, 158, 11, 0.15)',
@@ -95,6 +139,7 @@ export function InterviewHeader({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
+              marginTop: 4,
             }}
             title={isGemini ? 'Questions generated live via Google Gemini AI' : 'Questions generated via Local Smart Generator (Fallback)'}
           >
@@ -143,7 +188,14 @@ export function InterviewHeader({
       {/* Dynamic Progress Bar */}
       <div className="room-progress-subbar">
         <div className="room-progress-text">
-          <span>Question {Math.min(currentQuestionIndex + 1, totalQuestions)} of {totalQuestions}</span>
+          <span>
+            Question {Math.min(currentQuestionIndex + 1, totalQuestions)} of {totalQuestions}
+            {theoryCount > 0 && codingCount > 0 && (
+              <span style={{ marginLeft: 8, opacity: 0.8 }}>
+                (Theory: {theoryCount} | Coding: {codingCount})
+              </span>
+            )}
+          </span>
           <span>{Math.round(((currentQuestionIndex + 1) / totalQuestions) * 100)}% Complete</span>
         </div>
         <ProgressBar

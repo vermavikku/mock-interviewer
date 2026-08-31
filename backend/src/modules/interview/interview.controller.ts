@@ -168,8 +168,12 @@ export class InterviewController {
   @ApiOperation({
     summary: 'Stream the uploaded resume file for preview or download',
   })
-  async getResumeFile(@Param('sessionId') sessionId: string, @Res() res: Response) {
-    const { fileStream, mimeType, fileName } = await this.interviewService.getResumeFile(sessionId);
+  async getResumeFile(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser('id') userId: string,
+    @Res() res: Response,
+  ) {
+    const { fileStream, mimeType, fileName } = await this.interviewService.getResumeFile(sessionId, userId);
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
     fileStream.pipe(res);
