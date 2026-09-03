@@ -70,11 +70,15 @@ export function ChatTranscript({ messages = [], isAIThinking = false }) {
                     <div className="message-code-block animate-fade-in">
                       <div className="code-block-header">
                         <span className="code-lang-tag">{msg.language || 'javascript'}</span>
-                        {msg.testResults && (
+                        {msg.output ? (
+                          <span className="code-tests-badge" style={{ color: '#3FB950', background: 'rgba(63, 185, 80, 0.1)', borderColor: 'rgba(63, 185, 80, 0.25)' }}>
+                            ✓ Compiled & Executed
+                          </span>
+                        ) : msg.testResults ? (
                           <span className="code-tests-badge">
                             ✓ {msg.testResults.passedCount}/{msg.testResults.totalCount} Test Cases Passed
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <pre className="code-block-pre">
                         <code>{msg.code}</code>

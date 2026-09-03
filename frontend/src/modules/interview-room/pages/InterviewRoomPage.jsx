@@ -326,14 +326,16 @@ export function InterviewRoomPage() {
     }, 1100);
   };
 
-  // Candidate submits code solution
-  const handleSubmitCode = ({ code, language, explanation, testResults }) => {
+  // Candidate submits code solution from Black IDE
+  const handleSubmitCode = ({ code, language, output, exitCode }) => {
     if (!session || !allQuestions.length) return;
 
     const currentQuestion = allQuestions[currentQuestionIndex];
     const userMsgId = `msg_user_code_${Date.now()}`;
 
-    const submissionText = `\`\`\`${language}\n${code}\n\`\`\`${explanation ? `\n\n**Approach:** ${explanation}` : ''}`;
+    const submissionText = `\`\`\`${language}\n${code}\n\`\`\`${
+      output ? `\n\n**Compiler Output:**\n\`\`\`\n${output}\n\`\`\`` : ''
+    }`;
 
     const userMsg = {
       id: userMsgId,
@@ -343,22 +345,17 @@ export function InterviewRoomPage() {
       isCode: true,
       code,
       language,
-      testResults,
+      output,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setAiStatus('Thinking');
 
-    // Score based on test case pass rate + code structure
-    const passedRatio = testResults?.totalCount
-      ? testResults.passedCount / testResults.totalCount
-      : 1;
-    const baseScore = Math.round(passedRatio * 85 + (code.length > 50 ? 10 : 0));
-    const score = Math.min(100, Math.max(40, baseScore));
-
     let evalResult = {
-      score,
-      feedback: `Code solution received in ${language}. Passed ${testResults?.passedCount || 3}/${testResults?.totalCount || 3} automated test cases. Execution time: ${testResults?.executionTimeMs || 35}ms.`,
+      score: exitCode === 0 ? 80 : 50,
+      feedback: `Code solution submitted in ${language}. Program ${
+        exitCode === 0 ? 'compiled and executed successfully with exit status 0.' : 'executed with exit status 1.'
+      }`,
     };
 
     if (session.id && !session.id.startsWith('int_')) {
@@ -387,7 +384,7 @@ export function InterviewRoomPage() {
         section: 'CODING',
         code,
         language,
-        testResults,
+        output,
       },
     ];
     setAnsweredQuestions(updatedAnswered);
