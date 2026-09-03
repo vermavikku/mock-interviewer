@@ -274,7 +274,7 @@ export function InterviewRoomPage() {
   };
 
   // Candidate sends text/theory answer
-  const handleSendMessage = ({ text, note }) => {
+  const handleSendMessage = async ({ text, note }) => {
     if (!session || !allQuestions.length) return;
 
     const userMsgId = `msg_user_${Date.now()}`;
@@ -291,19 +291,24 @@ export function InterviewRoomPage() {
     setAiStatus('Thinking');
 
     const currentQuestion = allQuestions[currentQuestionIndex];
-    let evalResult = evaluateAnswer(currentQuestion?.question || '', text);
+    let evalResult = evaluateAnswer(currentQuestion?.question || '', text, currentQuestion?.expectedKeyPoints);
 
     if (session.id && !session.id.startsWith('int_')) {
-      api.submitQuestionAnswer(session.id, currentQuestion?.id || `q_${currentQuestionIndex + 1}`, text)
-        .then((res) => {
-          if (res?.evaluatedQuestion) {
-            evalResult = {
-              score: res.evaluatedQuestion.score || evalResult.score,
-              feedback: res.evaluatedQuestion.aiFeedback || evalResult.feedback,
-            };
-          }
-        })
-        .catch((e) => console.warn('Answer submit backend sync notice:', e));
+      try {
+        const res = await api.submitQuestionAnswer(
+          session.id,
+          currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
+          text,
+        );
+        if (res?.evaluatedQuestion) {
+          evalResult = {
+            score: typeof res.evaluatedQuestion.score === 'number' ? res.evaluatedQuestion.score : evalResult.score,
+            feedback: res.evaluatedQuestion.aiFeedback || evalResult.feedback,
+          };
+        }
+      } catch (e) {
+        console.warn('Answer submit backend sync notice:', e);
+      }
     }
 
     const updatedAnswered = [
@@ -323,11 +328,11 @@ export function InterviewRoomPage() {
 
     setTimeout(() => {
       advanceToQuestion(currentQuestionIndex + 1);
-    }, 1100);
+    }, 800);
   };
 
   // Candidate submits code solution from Black IDE
-  const handleSubmitCode = ({ code, language, output, exitCode }) => {
+  const handleSubmitCode = async ({ code, language, output, exitCode }) => {
     if (!session || !allQuestions.length) return;
 
     const currentQuestion = allQuestions[currentQuestionIndex];
@@ -352,23 +357,28 @@ export function InterviewRoomPage() {
     setAiStatus('Thinking');
 
     let evalResult = {
-      score: exitCode === 0 ? 80 : 50,
+      score: exitCode === 0 ? 55 : 20,
       feedback: `Code solution submitted in ${language}. Program ${
-        exitCode === 0 ? 'compiled and executed successfully with exit status 0.' : 'executed with exit status 1.'
+        exitCode === 0 ? 'compiled and executed successfully.' : 'executed with error exit code.'
       }`,
     };
 
     if (session.id && !session.id.startsWith('int_')) {
-      api.submitQuestionAnswer(session.id, currentQuestion?.id || `q_${currentQuestionIndex + 1}`, submissionText)
-        .then((res) => {
-          if (res?.evaluatedQuestion) {
-            evalResult = {
-              score: res.evaluatedQuestion.score || evalResult.score,
-              feedback: res.evaluatedQuestion.aiFeedback || evalResult.feedback,
-            };
-          }
-        })
-        .catch((e) => console.warn('Code answer submit backend sync notice:', e));
+      try {
+        const res = await api.submitQuestionAnswer(
+          session.id,
+          currentQuestion?.id || `q_${currentQuestionIndex + 1}`,
+          submissionText,
+        );
+        if (res?.evaluatedQuestion) {
+          evalResult = {
+            score: typeof res.evaluatedQuestion.score === 'number' ? res.evaluatedQuestion.score : evalResult.score,
+            feedback: res.evaluatedQuestion.aiFeedback || evalResult.feedback,
+          };
+        }
+      } catch (e) {
+        console.warn('Code answer submit backend sync notice:', e);
+      }
     }
 
     const updatedAnswered = [
@@ -391,7 +401,7 @@ export function InterviewRoomPage() {
 
     setTimeout(() => {
       advanceToQuestion(currentQuestionIndex + 1);
-    }, 1100);
+    }, 800);
   };
 
   const handleConfirmSkipQuestion = () => {
@@ -424,7 +434,7 @@ export function InterviewRoomPage() {
     advanceToQuestion(currentQuestionIndex + 1);
   };
 
-  const completeSession = (questionsAnswered) => {
+  const completeSession = async (questionsAnswered) => {
     setIsCompleted(true);
     soundEffects.playSuccess();
 
@@ -442,10 +452,31 @@ export function InterviewRoomPage() {
             section: q.section || (q.isCoding ? 'CODING' : 'THEORY'),
           }));
 
+    let serverCompletion = null;
+    if (session?.id && !session.id.startsWith('int_')) {
+      try {
+        serverCompletion = await api.completeSession(session.id, {
+          answers: questionsToScore.map((q) => ({
+            questionId: q.id,
+            userAnswer: q.userAnswer,
+            score: q.score,
+            feedback: q.feedback,
+          })),
+        });
+      } catch (e) {
+        console.warn('Could not sync completion to backend:', e);
+      }
+    }
+
     const validScores = questionsToScore.filter((q) => typeof q.score === 'number');
-    const avgScore = validScores.length
+    const localAvgScore = validScores.length
       ? Math.round(validScores.reduce((acc, q) => acc + q.score, 0) / validScores.length)
       : 0;
+
+    const finalOverallScore =
+      typeof serverCompletion?.totalScore === 'number' ? serverCompletion.totalScore : localAvgScore;
+
+    const serverEval = serverCompletion?.sessionData?.evaluation;
 
     const completedData = {
       id: session?.id || `int_${Date.now()}`,
@@ -456,13 +487,17 @@ export function InterviewRoomPage() {
       type: session?.config?.type || 'Technical',
       difficulty: session?.config?.difficulty || 'Medium',
       durationMinutes: Math.round(((session?.totalDurationSeconds || 1800) / 60) * 0.75),
-      overallScore: avgScore,
-      subScores: {
-        technical: Math.min(100, Math.max(0, avgScore + 2)),
-        communication: Math.min(100, Math.max(0, avgScore - 2)),
-        problemSolving: avgScore,
-        confidence: Math.min(100, Math.max(0, avgScore + 1)),
+      overallScore: finalOverallScore,
+      score: finalOverallScore,
+      subScores: serverEval?.subScores || {
+        technical: finalOverallScore,
+        communication: Math.round(finalOverallScore * 0.95),
+        problemSolving: finalOverallScore,
+        confidence: Math.round(finalOverallScore * 0.98),
       },
+      strengths: serverEval?.strengths,
+      improvements: serverEval?.improvements,
+      recommendations: serverEval?.recommendations,
       questions: questionsToScore.map((q) => {
         const origQ = allQuestions.find((sq) => sq.id === q.id);
         return {
@@ -483,18 +518,6 @@ export function InterviewRoomPage() {
     }
 
     saveCompletedInterview(completedData);
-
-    if (session?.id && !session.id.startsWith('int_')) {
-      api.completeSession(session.id, {
-        totalScore: avgScore,
-        answers: questionsToScore.map((q) => ({
-          questionId: q.id,
-          userAnswer: q.userAnswer,
-          score: q.score,
-          feedback: q.feedback,
-        })),
-      }).catch((e) => console.warn('Could not sync completion to backend:', e));
-    }
 
     navigate('/interviews/result', {
       state: { results: completedData, sessionId: completedData.id },

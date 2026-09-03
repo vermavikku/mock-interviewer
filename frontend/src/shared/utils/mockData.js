@@ -468,35 +468,82 @@ async function promisePool(functions, limit) {
 /**
  * Dynamic AI Feedback Generator based on user answer evaluation
  */
-export function evaluateAnswer(question, answer) {
+export function evaluateAnswer(question, answer, expectedKeyPoints = []) {
   const trimmed = (answer || '').trim();
   const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
+  const lowerAnswer = trimmed.toLowerCase();
+  const lowerQuestion = (question || '').toLowerCase();
 
-  // Strict check: If skipped or empty, return 0%
-  if (!trimmed || trimmed.includes('[Skipped') || wordCount < 5) {
+  // Strict check: If skipped or empty or too short, return 0%
+  if (!trimmed || trimmed.includes('[Skipped') || wordCount < 5 || trimmed.length < 15) {
     return {
       score: 0,
-      feedback: 'This question was skipped without an answer. Review the recommended ideal answer below to study key concepts and practice your delivery.',
+      feedback: 'This question was skipped or lacks sufficient detail to evaluate. Review the recommended ideal answer to study key concepts and practice your delivery.',
       wordCount: 0,
       timestamp: new Date().toISOString(),
     };
   }
 
-  let score = 70;
-  let feedback = 'Good response covering core principles.';
+  // Check for expressions of ignorance or blatant non-answers
+  const nonAnswerPhrases = [
+    "don't know",
+    'do not know',
+    'no idea',
+    'not sure',
+    'wrong answer',
+    'fake answer',
+    'test test',
+    'asdf',
+    'bla bla',
+    'idk',
+  ];
+  if (nonAnswerPhrases.some((phrase) => lowerAnswer.includes(phrase))) {
+    return {
+      score: 10,
+      feedback: 'Incorrect. The response indicates uncertainty or lacks a substantive technical answer. Review the reference solution below.',
+      wordCount,
+      timestamp: new Date().toISOString(),
+    };
+  }
 
-  if (wordCount < 15) {
+  // Tokenize question and expected points to check keyword overlap
+  const stopWords = new Set([
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about',
+    'can', 'you', 'how', 'what', 'why', 'explain', 'difference', 'between', 'your', 'and', 'or', 'of',
+  ]);
+  const extractKeywords = (str) =>
+    str
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 3 && !stopWords.has(w));
+
+  const questionKeywords = extractKeywords(question);
+  const keyPointKeywords = (expectedKeyPoints || []).flatMap((kp) => extractKeywords(kp));
+  const allTargetKeywords = Array.from(new Set([...questionKeywords, ...keyPointKeywords]));
+
+  const answerKeywords = new Set(extractKeywords(trimmed));
+  const matchCount = allTargetKeywords.filter((kw) => answerKeywords.has(kw)).length;
+  const matchRatio = allTargetKeywords.length > 0 ? matchCount / allTargetKeywords.length : 0.5;
+
+  let score = 25;
+  let feedback = 'Your answer seems off-topic or does not directly address the core technical concepts asked in the question.';
+
+  if (matchRatio === 0 && wordCount < 20) {
+    score = 15;
+    feedback = 'Incorrect or unrelated response. Be sure to address the specific technologies and architecture asked in the prompt.';
+  } else if (matchRatio < 0.2) {
     score = 35;
-    feedback = 'Your answer is brief. Try adding concrete technical examples, specific tools used, and measurable results.';
-  } else if (wordCount < 35) {
-    score = 65;
-    feedback = 'Solid start covering high-level concepts, but could benefit from deeper technical detail and trade-off considerations.';
-  } else if (wordCount >= 35 && wordCount <= 120) {
-    score = 86;
-    feedback = 'Well-structured response! You highlighted key architecture considerations and explained your rationale clearly.';
-  } else if (wordCount > 120) {
-    score = 92;
-    feedback = 'Exceptional, detailed answer. You demonstrated strong domain mastery, addressed edge cases, and communicated trade-offs effectively.';
+    feedback = 'Partial attempt, but misses the primary architectural constraints and trade-offs required for this problem.';
+  } else if (matchRatio < 0.4) {
+    score = 60;
+    feedback = 'Covers basic high-level points, but could benefit from deeper technical detail, concrete metrics, and edge cases.';
+  } else if (matchRatio < 0.65) {
+    score = 75;
+    feedback = 'Solid technical answer addressing key concepts and showing practical knowledge.';
+  } else {
+    score = 85;
+    feedback = 'Well-articulated solution! You demonstrated strong domain depth and addressed the primary system constraints.';
   }
 
   return {

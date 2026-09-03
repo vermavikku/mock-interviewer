@@ -90,34 +90,31 @@ export function InterviewResultPage() {
             resume: {
               name: payload.originalFileName || 'Resume.pdf',
             },
-            score: payload.totalScore || 85,
-            subScores: jsonDoc.evaluationReport?.subScores || {
-              technical: 88,
-              communication: 82,
-              problemSolving: 85,
-              confidence: 80,
+            score: typeof payload.totalScore === 'number' ? payload.totalScore : (jsonDoc?.evaluation?.overallScore ?? 0),
+            subScores: jsonDoc?.evaluation?.subScores || jsonDoc?.evaluationReport?.subScores || {
+              technical: typeof payload.totalScore === 'number' ? payload.totalScore : 0,
+              communication: typeof payload.totalScore === 'number' ? Math.round(payload.totalScore * 0.95) : 0,
+              problemSolving: typeof payload.totalScore === 'number' ? payload.totalScore : 0,
+              confidence: typeof payload.totalScore === 'number' ? Math.round(payload.totalScore * 0.98) : 0,
             },
-            strengths: jsonDoc.evaluationReport?.strengths || [
-              'Clear explanation of system architecture trade-offs and scalability bottlenecks',
-              'Structured problem-solving delivery with minimal filler words',
-              'Strong knowledge of caching, database indexing, and asynchronous queueing',
+            strengths: jsonDoc?.evaluation?.strengths || jsonDoc?.evaluationReport?.strengths || [
+              'Attended interview session and attempted all allocated questions',
             ],
-            improvements: jsonDoc.evaluationReport?.improvements || [
-              'Incorporate concrete production SLAs (p99 latency, RPS targets)',
-              'Elaborate on disaster recovery, circuit breakers, and fallback strategies',
+            improvements: jsonDoc?.evaluation?.improvements || jsonDoc?.evaluationReport?.improvements || [
+              'Review core technical principles and practice with the reference answers provided below',
             ],
-            recommendations: jsonDoc.evaluationReport?.recommendations || [
-              'Distributed Systems & Consistency Models',
-              'Event-driven Architecture with BullMQ & Redis',
+            recommendations: jsonDoc?.evaluation?.recommendations || jsonDoc?.evaluationReport?.recommendations || [
+              'Foundational Computer Science Concepts',
+              'Algorithm Complexity & System Design',
             ],
-            questions: (jsonDoc.generatedQuestions || []).map((q, idx) => ({
+            questions: (jsonDoc?.generatedQuestions || []).map((q, idx) => ({
               id: q.id || `q_${idx + 1}`,
               question: q.question,
               category: q.category || payload.interviewType,
               difficulty: q.difficulty || payload.difficulty,
-              userAnswer: q.userAnswer || 'Answer submitted and reviewed by AI evaluator.',
-              feedback: q.aiFeedback || q.feedback || 'Clear structure and technical accuracy demonstrated.',
-              score: typeof q.score === 'number' ? q.score : 85,
+              userAnswer: q.userAnswer || 'No answer submitted for this question.',
+              feedback: q.aiFeedback || q.feedback || 'Answer reviewed by AI evaluator.',
+              score: typeof q.score === 'number' ? q.score : 0,
               expectedKeyPoints: q.expectedKeyPoints || [],
               idealAnswer: q.idealAnswer || '',
               isCoding: q.isCoding || false,
@@ -129,7 +126,9 @@ export function InterviewResultPage() {
 
           setResults(formatted);
           soundEffects.playSuccess();
-          triggerConfetti();
+          if ((formatted.score ?? 0) >= 65) {
+            triggerConfetti();
+          }
         } catch (err) {
           console.warn('Could not fetch results from backend:', err);
         }
@@ -184,29 +183,25 @@ export function InterviewResultPage() {
     );
   }
 
-  const overallScore = results.score || 85;
+  const overallScore = typeof results.score === 'number' ? results.score : (typeof results.overallScore === 'number' ? results.overallScore : 0);
   const subScores = results.subScores || {
-    technical: 88,
-    communication: 82,
-    problemSolving: 86,
-    confidence: 80,
+    technical: overallScore,
+    communication: Math.round(overallScore * 0.95),
+    problemSolving: overallScore,
+    confidence: Math.round(overallScore * 0.98),
   };
 
   const strengths = results.strengths || [
-    'Strong architectural fundamentals and database indexing awareness',
-    'Clear breakdown of idempotency and distributed queueing strategies',
-    'Structured response delivery with low filler words',
+    'Attended interview session and attempted all allocated questions',
   ];
 
   const improvements = results.improvements || [
-    'Elaborate more on quantitative production SLAs (p99 latency, RPS throughput)',
-    'Explain failure recovery and fallback circuit-breaker trade-offs more explicitly',
+    'Review core technical principles and practice with the reference answers provided below',
   ];
 
   const recommendations = results.recommendations || [
-    'System Design & Distributed Scalability',
-    'Event-driven Architecture & Idempotency',
-    'CAP Theorem & High Availability Partitioning',
+    'Core Computer Science Fundamentals',
+    'Algorithm Design & Complexity',
   ];
 
   const questionsList = results.questions || [];
@@ -234,7 +229,13 @@ export function InterviewResultPage() {
           </div>
           <div className="overall-score-copy">
             <h3 className="score-verdict">
-              {overallScore >= 85 ? 'Strong Hire / Bar Raiser 🚀' : overallScore >= 75 ? 'Solid Performance ✨' : 'Needs Practice 📈'}
+              {overallScore >= 85
+                ? 'Strong Hire / Bar Raiser 🚀'
+                : overallScore >= 75
+                ? 'Solid Performance ✨'
+                : overallScore >= 50
+                ? 'Developing Performance 💡'
+                : 'Needs Significant Practice ⚠️'}
             </h3>
             <p className="score-verdict-desc">
               Target Role: <strong>{results.config?.role || 'Software Engineer'}</strong> ({results.config?.level || 'Senior'}) • Interview Type: <strong>{results.config?.type || 'Technical'}</strong>

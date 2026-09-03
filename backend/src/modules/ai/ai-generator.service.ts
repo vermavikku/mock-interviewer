@@ -297,7 +297,7 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
       rawAnswer.includes('return ');
 
     const prompt = `
-You are a strict, senior technical interview bar-raiser evaluating a candidate's ${isCodeSubmission ? 'code implementation & problem-solving approach' : 'answer'}.
+You are an uncompromising, strict senior technical interview bar-raiser evaluating a candidate's ${isCodeSubmission ? 'code implementation & problem-solving approach' : 'answer'}.
 
 Question / Problem: "${params.question}"
 Expected Key Points: ${JSON.stringify(params.expectedKeyPoints || [])}
@@ -308,18 +308,21 @@ Candidate Submission:
 ${rawAnswer}
 """
 
-Evaluation Rubric:
-- 0 to 20: Completely irrelevant, empty/broken syntax, or fundamentally incorrect logic.
-- 21 to 50: Incomplete, missing critical edge cases, wrong algorithmic approach, or poor complexity.
-- 51 to 70: Working but sub-optimal solution (e.g. O(N^2) brute force when O(N) is expected), minor edge case bugs, or lacks technical depth.
-- 71 to 85: Clean, correct solution addressing core constraints with good complexity analysis.
-- 86 to 100: Exceptional, optimal time/space complexity, handles all edge cases (null, empty, boundary limits), with clean idiomatic code and trade-off commentary.
+CRITICAL EVALUATION RULES (STRICT ACCURACY CHECK):
+1. ACCURACY COMES FIRST: If the candidate's answer is factually incorrect, wrong, nonsensical, irrelevant, or claims something false, you MUST assign a score between 0 and 20. DO NOT give credit for confident tone, long text, or fluff if the technical concept is wrong.
+2. If the candidate answers an entirely different question or provides filler/gibberish, score: 0 to 10.
+3. If the candidate provides a partially correct answer but has fundamental misconceptions or missing core points, score: 20 to 45.
+4. If working but sub-optimal (e.g. brute force, missing edge cases, lacks architectural depth), score: 50 to 70.
+5. If clean, technically accurate, and addresses expected key points, score: 71 to 85.
+6. Only exceptional, optimal, production-grade solutions with trade-offs deserve 86 to 100.
+${isCodeSubmission ? '7. For code submissions: Broken syntax, non-compiling code, or fundamentally wrong algorithms must be scored <= 20. Working code with missing edge cases: 40-60.' : ''}
 
-${isCodeSubmission ? 'For code submissions: Explicitly evaluate time/space complexity (e.g. O(N) Time, O(1) Space), edge cases, and code readability in your feedback.' : 'Be strict and realistic. Do not give high scores to vague or superficial responses.'}
-Provide a numeric score (0 to 100) and actionable constructive feedback (2-3 sentences).
+In your feedback:
+- Explicitly state whether the answer was correct, partially correct, or incorrect.
+- Clearly identify the specific misconceptions, errors, or missing points compared to the ideal solution (2-3 concise sentences).
 
 Respond ONLY in valid JSON format:
-{"score": 75, "feedback": "Constructive critique highlighting complexity, correctness, and improvement areas..."}
+{"score": 15, "feedback": "Incorrect. The explanation confuses X with Y..."}
 `;
     let rawResponseText = '';
 
@@ -329,7 +332,7 @@ Respond ONLY in valid JSON format:
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
-          temperature: 0.2,
+          temperature: 0.1,
         },
       });
       rawResponseText = response.text || '';
@@ -341,7 +344,7 @@ Respond ONLY in valid JSON format:
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             responseMimeType: 'application/json',
-            temperature: 0.2,
+            temperature: 0.1,
           },
         },
         { headers: { 'Content-Type': 'application/json' } },
@@ -358,7 +361,7 @@ Respond ONLY in valid JSON format:
   }
 
   /**
-   * Calculates overall session evaluation summary strictly
+   * Calculates overall session evaluation summary strictly based on real question performance
    */
   calculateFinalEvaluation(questions: SessionQuestion[]): SessionEvaluation {
     const scoredQuestions = questions.filter((q) => typeof q.score === 'number');
@@ -373,40 +376,74 @@ Respond ONLY in valid JSON format:
       };
     }
 
-    const avgScore = Math.round(
-      scoredQuestions.reduce((acc, q) => acc + (q.score || 0), 0) / scoredQuestions.length,
-    );
+    const totalScoreSum = scoredQuestions.reduce((acc, q) => acc + (q.score || 0), 0);
+    const avgScore = Math.round(totalScoreSum / scoredQuestions.length);
 
-    if (avgScore === 0) {
-      return {
-        overallScore: 0,
-        subScores: { technical: 0, communication: 0, problemSolving: 0, confidence: 0 },
-        strengths: ['No completed answers were recorded.'],
-        improvements: ['Practice answering the questions directly rather than skipping them.'],
-        recommendations: ['Study the ideal answers provided for each question to build familiarity with expected concepts.'],
-      };
+    // Compute category-specific subscores
+    const codingQuestions = scoredQuestions.filter((q) => q.isCoding || q.section === 'CODING');
+    const theoryQuestions = scoredQuestions.filter((q) => !q.isCoding && q.section !== 'CODING');
+
+    const codingAvg = codingQuestions.length
+      ? Math.round(codingQuestions.reduce((acc, q) => acc + (q.score || 0), 0) / codingQuestions.length)
+      : avgScore;
+
+    const theoryAvg = theoryQuestions.length
+      ? Math.round(theoryQuestions.reduce((acc, q) => acc + (q.score || 0), 0) / theoryQuestions.length)
+      : avgScore;
+
+    const technicalScore = Math.min(100, Math.max(0, theoryAvg));
+    const problemSolvingScore = Math.min(100, Math.max(0, codingAvg));
+    const communicationScore = Math.min(100, Math.max(0, Math.round(avgScore * 0.95)));
+    const confidenceScore = Math.min(100, Math.max(0, Math.round(avgScore * 0.98)));
+
+    // Derive dynamic strengths from high-scoring questions
+    const highScorers = scoredQuestions.filter((q) => (q.score || 0) >= 70);
+    const lowScorers = scoredQuestions.filter((q) => (q.score || 0) < 60);
+
+    const strengths: string[] = [];
+    if (highScorers.length > 0) {
+      highScorers.slice(0, 3).forEach((q) => {
+        strengths.push(`Solid understanding demonstrated in ${q.category || 'Technical Area'}: successfully articulated core concepts.`);
+      });
+    } else {
+      strengths.push('Demonstrated persistence by attempting questions across multiple technical topic areas.');
+    }
+
+    // Derive dynamic improvements from low-scoring questions
+    const improvements: string[] = [];
+    if (lowScorers.length > 0) {
+      lowScorers.slice(0, 3).forEach((q) => {
+        improvements.push(`Review ${q.category || 'topic'} constraints and revise core principles for "${q.question.slice(0, 70)}..."`);
+      });
+    } else {
+      improvements.push('Deepen coverage of edge cases, quantifiable SLAs (p99 latency, throughput), and production failure modes.');
+    }
+
+    // Derive dynamic study recommendations
+    const recommendations: string[] = [];
+    if (lowScorers.length > 0) {
+      lowScorers.slice(0, 3).forEach((q) => {
+        if (q.category && !recommendations.includes(q.category)) {
+          recommendations.push(`Deep dive into ${q.category} architecture and standard patterns`);
+        }
+      });
+    }
+    if (recommendations.length === 0) {
+      recommendations.push('High-scale distributed systems and resiliency patterns');
+      recommendations.push('Database query optimization and index design');
     }
 
     return {
       overallScore: avgScore,
       subScores: {
-        technical: Math.min(100, Math.max(0, avgScore + 2)),
-        communication: Math.min(100, Math.max(0, avgScore - 2)),
-        problemSolving: avgScore,
-        confidence: Math.min(100, Math.max(0, avgScore + 1)),
+        technical: technicalScore,
+        communication: communicationScore,
+        problemSolving: problemSolvingScore,
+        confidence: confidenceScore,
       },
-      strengths: [
-        'Structured technical articulation with clear system boundaries',
-        'Strong contextual understanding of core engineering principles',
-      ],
-      improvements: [
-        'Elaborate more on quantifiable metrics (e.g. latency percentiles, throughput)',
-        'Mention failure modes and recovery procedures in greater depth',
-      ],
-      recommendations: [
-        'System Scalability and Microservices Resilience',
-        'Database query plan optimization & indexing',
-      ],
+      strengths,
+      improvements,
+      recommendations,
     };
   }
 }

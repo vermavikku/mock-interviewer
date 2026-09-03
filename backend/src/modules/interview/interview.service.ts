@@ -559,6 +559,7 @@ export class InterviewService {
       question: targetQuestion.question,
       answer: dto.answer,
       expectedKeyPoints: targetQuestion.expectedKeyPoints,
+      idealAnswer: targetQuestion.idealAnswer,
     });
 
     targetQuestion.userAnswer = dto.answer;
@@ -622,26 +623,35 @@ export class InterviewService {
 
     const jsonDoc = await this.sessionJsonService.readSession(sessionId);
 
-    // Merge any updated answers/scores provided in completion payload
+    // Merge answers provided in completion payload only if question has not been evaluated yet
     if (dto.answers && dto.answers.length > 0) {
       for (const ans of dto.answers) {
         const qIdx = jsonDoc.generatedQuestions.findIndex((q) => q.id === ans.questionId);
         if (qIdx !== -1) {
-          if (ans.userAnswer !== undefined) jsonDoc.generatedQuestions[qIdx].userAnswer = ans.userAnswer;
-          if (ans.score !== undefined) jsonDoc.generatedQuestions[qIdx].score = ans.score;
-          if (ans.feedback !== undefined) jsonDoc.generatedQuestions[qIdx].aiFeedback = ans.feedback;
-          jsonDoc.generatedQuestions[qIdx].answeredAt = new Date().toISOString();
+          if (ans.userAnswer !== undefined && !jsonDoc.generatedQuestions[qIdx].userAnswer) {
+            jsonDoc.generatedQuestions[qIdx].userAnswer = ans.userAnswer;
+          }
+          // Only use client score if server-side question score is missing
+          if (typeof jsonDoc.generatedQuestions[qIdx].score !== 'number' && typeof ans.score === 'number') {
+            jsonDoc.generatedQuestions[qIdx].score = ans.score;
+          }
+          if (!jsonDoc.generatedQuestions[qIdx].aiFeedback && ans.feedback) {
+            jsonDoc.generatedQuestions[qIdx].aiFeedback = ans.feedback;
+          }
+          if (!jsonDoc.generatedQuestions[qIdx].answeredAt) {
+            jsonDoc.generatedQuestions[qIdx].answeredAt = new Date().toISOString();
+          }
         }
       }
     }
 
-    // Strict evaluation summary
+    // Strict evaluation summary computed from real question evaluations
     const finalEval = this.aiGeneratorService.calculateFinalEvaluation(jsonDoc.generatedQuestions);
     jsonDoc.evaluation = finalEval;
     jsonDoc.status = 'COMPLETED';
 
-    const calculatedOverallScore =
-      typeof dto.totalScore === 'number' ? dto.totalScore : (finalEval.overallScore || 0);
+    // The backend authoritative evaluation score governs the database
+    const calculatedOverallScore = finalEval.overallScore ?? 0;
 
     await this.prisma.interviewSession.update({
       where: { id: sessionId },
