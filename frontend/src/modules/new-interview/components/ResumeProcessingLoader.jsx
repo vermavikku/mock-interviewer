@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Check, Loader2, BrainCircuit, AlertTriangle } from 'lucide-react';
 import * as api from '../../../shared/utils/apiClient';
 import './NewInterview.css';
@@ -11,8 +11,10 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
   // 3: GENERATING_QUESTIONS
   // 4: READY (all complete)
   const [currentStep, setCurrentStep] = useState(0);
+  const [targetStep, setTargetStep] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [stageDetails, setStageDetails] = useState('');
 
   const stages = [
     { title: 'Resume uploaded & verified by NestJS Gateway', key: 'UPLOADED' },
@@ -22,61 +24,131 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
     { title: 'Personalized AI interview session ready in BullMQ', key: 'READY' },
   ];
 
+  const completedFiredRef = useRef(false);
+
+  // Smooth progressive step ticker: Advance currentStep towards targetStep smoothly
   useEffect(() => {
-    // If we don't have a sessionId yet, we are in the initial file upload phase
+    if (currentStep < targetStep) {
+      const stepTimer = setTimeout(() => {
+        setCurrentStep((prev) => Math.min(prev + 1, targetStep));
+      }, 380);
+      return () => clearTimeout(stepTimer);
+    }
+  }, [currentStep, targetStep]);
+
+  // Completion trigger: Fires once when targetStep and currentStep reach 4
+  useEffect(() => {
+    if (currentStep === 4 && targetStep === 4 && sessionId && !completedFiredRef.current) {
+      completedFiredRef.current = true;
+      setIsCompleted(true);
+      const finishTimer = setTimeout(() => {
+        if (onComplete) {
+          onComplete(sessionId);
+        }
+      }, 600);
+      return () => clearTimeout(finishTimer);
+    }
+  }, [currentStep, targetStep, sessionId, onComplete]);
+
+  // Status and log polling from NestJS backend
+  useEffect(() => {
     if (!sessionId) {
-      setCurrentStep(0);
+      // In-flight upload phase before sessionId is issued
+      setTargetStep(0);
+      setStageDetails('Uploading resume file to NestJS gateway...');
       return;
     }
 
     let isSubscribed = true;
     let pollInterval = null;
 
+    const computeTargetStep = (status, logs = []) => {
+      let step = 0;
+
+      // Check status string first
+      if (status === 'PENDING') step = Math.max(step, 0);
+      if (status === 'CONVERTING_DOC') step = Math.max(step, 1);
+      if (status === 'EXTRACTING_OCR') step = Math.max(step, 2);
+      if (status === 'GENERATING_QUESTIONS') step = Math.max(step, 3);
+      if (status === 'READY') step = 4;
+
+      // In addition, inspect fine-grained microservice pipeline logs
+      if (Array.isArray(logs) && logs.length > 0) {
+        const logSteps = logs.map((l) => l.step);
+
+        if (logSteps.includes('DOCUMENT_CONVERSION_STARTED')) {
+          step = Math.max(step, 1);
+        }
+        if (logSteps.includes('DOCUMENT_CONVERSION_COMPLETED')) {
+          step = Math.max(step, 1);
+        }
+        if (logSteps.includes('OCR_EXTRACTION_STARTED')) {
+          step = Math.max(step, 2);
+        }
+        if (logSteps.includes('OCR_EXTRACTION_COMPLETED')) {
+          step = Math.max(step, 2);
+        }
+        if (logSteps.includes('AI_QUESTION_GENERATION_STARTED')) {
+          step = Math.max(step, 3);
+        }
+        if (logSteps.includes('PIPELINE_COMPLETED')) {
+          step = 4;
+        }
+      }
+
+      return step;
+    };
+
     const pollStatus = async () => {
       try {
         const res = await api.getSessionStatus(sessionId);
         const data = res.data || res;
         const status = data.status;
+        const logs = data.logs || [];
 
         if (!isSubscribed) return;
 
-        if (status === 'PENDING') {
-          setCurrentStep(0);
-        } else if (status === 'CONVERTING_DOC') {
-          setCurrentStep(1);
-        } else if (status === 'EXTRACTING_OCR') {
-          setCurrentStep(2);
-        } else if (status === 'GENERATING_QUESTIONS') {
-          setCurrentStep(3);
-        } else if (status === 'READY') {
-          setCurrentStep(4);
-          setIsCompleted(true);
-          if (pollInterval) clearInterval(pollInterval);
-
-          setTimeout(() => {
-            if (isSubscribed && onComplete) {
-              onComplete(sessionId);
-            }
-          }, 600);
-        } else if (status === 'FAILED') {
+        if (status === 'FAILED') {
           if (pollInterval) clearInterval(pollInterval);
           setErrorMessage(data.errorMessage || 'Session processing failed in background worker.');
           if (onError) onError(data.errorMessage || 'Session processing failed');
+          return;
+        }
+
+        const calculated = computeTargetStep(status, logs);
+        setTargetStep((prev) => Math.max(prev, calculated));
+
+        // Set contextual subtitle from latest pipeline log
+        if (logs.length > 0) {
+          const lastLog = logs[logs.length - 1];
+          if (lastLog?.message) {
+            setStageDetails(lastLog.message);
+          }
+        } else if (status === 'CONVERTING_DOC') {
+          setStageDetails('Converting PDF pages into high-res images...');
+        } else if (status === 'EXTRACTING_OCR') {
+          setStageDetails('Extracting candidate profile text via OCR worker pool...');
+        } else if (status === 'GENERATING_QUESTIONS') {
+          setStageDetails('Google Gemini AI is synthesizing tailored questions and coding problems...');
+        }
+
+        if (status === 'READY' && calculated === 4) {
+          if (pollInterval) clearInterval(pollInterval);
         }
       } catch (err) {
-        console.warn('Polling status warning:', err.message);
+        console.warn('Polling status notice:', err.message);
       }
     };
 
-    // Immediate initial check, then poll every 1000ms
+    // Immediate initial check, then poll every 900ms
     pollStatus();
-    pollInterval = setInterval(pollStatus, 1000);
+    pollInterval = setInterval(pollStatus, 900);
 
     return () => {
       isSubscribed = false;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [sessionId]);
+  }, [sessionId, onError]);
 
   return (
     <div className="processing-loader-wrap animate-fade-in">
@@ -92,7 +164,7 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
       <div className="processing-headings">
         <h3 className="processing-title">Analyzing Your Resume with Gemini...</h3>
         <p className="processing-subtitle">
-          NestJS Gateway, BullMQ, and Google AI Studio are synthesizing your profile into a realistic mock interview
+          {stageDetails || 'NestJS Gateway, BullMQ, and Google AI Studio are synthesizing your profile into a realistic mock interview'}
         </p>
       </div>
 

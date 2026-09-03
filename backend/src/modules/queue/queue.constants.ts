@@ -12,4 +12,6 @@ export interface ResumePipelineJobData {
   difficulty: string;
   interviewType: string;
   targetDurationMin: number;
+  skipConversion?: boolean;
+  preExtractedText?: string;
 }

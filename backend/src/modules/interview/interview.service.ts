@@ -175,52 +175,9 @@ export class InterviewService {
         storedFilePath: relativeStoredFilePath,
       });
 
-    // If source session already has extracted raw text, generate questions immediately
-    if (sourceSession.rawExtractedText) {
-      const questions = await this.aiGeneratorService.generateQuestions({
-        rawResumeText: sourceSession.rawExtractedText,
-        targetRole: dto.targetRole,
-        seniorityLevel: dto.seniorityLevel || 'Senior',
-        difficulty: dto.difficulty || 'Medium',
-        interviewType: dto.interviewType || 'Technical',
-        questionCount: 5,
-        targetDurationMin: dto.targetDurationMin || 30,
-      });
+    const hasPreExtracted = Boolean(sourceSession.rawExtractedText);
 
-      const updatedDoc = await this.sessionJsonService.updateSession(sessionId, (doc) => {
-        doc.status = 'READY';
-        doc.resume.fullExtractedText = sourceSession.rawExtractedText;
-        doc.generatedQuestions = questions;
-        return doc;
-      });
-
-      const sessionRecord = await this.prisma.interviewSession.create({
-        data: {
-          id: sessionId,
-          title: initialDoc.title,
-          targetRole: dto.targetRole,
-          seniorityLevel: dto.seniorityLevel || 'Senior',
-          difficulty: dto.difficulty || 'Medium',
-          interviewType: dto.interviewType || 'Technical',
-          targetDurationMin: dto.targetDurationMin || 30,
-          status: 'READY',
-          originalFileName: sourceSession.originalFileName,
-          mimeType: sourceSession.mimeType,
-          storedFilePath: relativeStoredFilePath,
-          sessionJsonPath,
-          rawExtractedText: sourceSession.rawExtractedText,
-          userId: userId || null,
-        },
-      });
-
-      return {
-        session: sessionRecord,
-        sessionData: updatedDoc,
-        message: 'New session created instantly using existing extracted resume profile.',
-      };
-    }
-
-    // Otherwise, dispatch BullMQ job to run full pipeline
+    // Create session record immediately in DB
     const sessionRecord = await this.prisma.interviewSession.create({
       data: {
         id: sessionId,
@@ -230,15 +187,38 @@ export class InterviewService {
         difficulty: dto.difficulty || 'Medium',
         interviewType: dto.interviewType || 'Technical',
         targetDurationMin: dto.targetDurationMin || 30,
-        status: 'PENDING',
+        status: hasPreExtracted ? 'GENERATING_QUESTIONS' : 'PENDING',
         originalFileName: sourceSession.originalFileName,
         mimeType: sourceSession.mimeType,
         storedFilePath: relativeStoredFilePath,
         sessionJsonPath,
+        rawExtractedText: sourceSession.rawExtractedText || null,
         userId: userId || null,
       },
     });
 
+    if (hasPreExtracted) {
+      await this.sessionJsonService.logPipelineStep(
+        sessionId,
+        'DOCUMENT_CONVERSION_COMPLETED',
+        'success',
+        'Resume verified & page images retrieved from existing profile',
+      );
+      await this.sessionJsonService.logPipelineStep(
+        sessionId,
+        'OCR_EXTRACTION_COMPLETED',
+        'success',
+        `Retrieved ${sourceSession.rawExtractedText.length} characters of verified extracted text`,
+      );
+      await this.sessionJsonService.logPipelineStep(
+        sessionId,
+        'AI_QUESTION_GENERATION_STARTED',
+        'pending',
+        'Generating tailored interview questions based on extracted resume profile',
+      );
+    }
+
+    // Dispatch BullMQ background job (fast-path skips conversion & OCR if pre-extracted)
     const job = await this.resumeQueue.add(
       JOB_PROCESS_RESUME,
       {
@@ -251,6 +231,8 @@ export class InterviewService {
         difficulty: dto.difficulty || 'Medium',
         interviewType: dto.interviewType || 'Technical',
         targetDurationMin: dto.targetDurationMin || 30,
+        skipConversion: hasPreExtracted,
+        preExtractedText: sourceSession.rawExtractedText || undefined,
       },
       {
         jobId: `job_${sessionId}`,
@@ -266,11 +248,13 @@ export class InterviewService {
       data: { bullJobId: job.id?.toString() },
     });
 
+    this.logger.log(`Created interview session ${sessionId} with BullMQ job ${job.id} (preExtracted: ${hasPreExtracted})`);
+
     return {
       session: sessionRecord,
       sessionData: initialDoc,
       jobId: job.id,
-      message: 'New session created using existing resume. Pipeline dispatched.',
+      message: 'New session created and queued for background AI question generation.',
     };
   }
 
