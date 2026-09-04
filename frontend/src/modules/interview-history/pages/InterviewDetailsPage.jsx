@@ -85,7 +85,7 @@ export function InterviewDetailsPage() {
             difficulty: q.difficulty,
             answer: q.userAnswer || 'No answer recorded for this question.',
             userAnswer: q.userAnswer,
-            feedback: q.aiFeedback || q.feedback || 'Answer evaluated by Google Gemini AI.',
+            feedback: q.aiFeedback || q.feedback || 'Answer evaluated by AI.',
             score: typeof q.score === 'number' ? q.score : 0,
             expectedKeyPoints: q.expectedKeyPoints,
             idealAnswer: q.idealAnswer,
@@ -116,7 +116,7 @@ export function InterviewDetailsPage() {
       <PageWrapper>
         <div style={{ padding: '80px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <Loader2 size={36} className="stage-spinner" style={{ color: 'var(--color-primary)' }} />
-          <span style={{ color: 'var(--text-dim)' }}>Loading interview transcript and Google Gemini evaluations...</span>
+          <span style={{ color: 'var(--text-dim)' }}>Loading interview transcript and evaluations...</span>
         </div>
       </PageWrapper>
     );

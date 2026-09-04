@@ -179,6 +179,17 @@ export class InterviewController {
     fileStream.pipe(res);
   }
 
+  @Delete('resumes/:sessionId')
+  @ApiOperation({
+    summary: 'Delete a resume document permanently from the vault and disk',
+  })
+  async deleteResume(
+    @Param('sessionId') sessionId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.interviewService.deleteResume(sessionId, userId);
+  }
+
   @Get('sessions')
   @ApiOperation({ summary: 'List all interview sessions belonging to the authenticated candidate' })
   async getAllSessions(@CurrentUser('id') userId: string) {

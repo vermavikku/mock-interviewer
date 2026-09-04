@@ -40,14 +40,17 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
-# Create storage directories for resumes and JSON documents
-RUN mkdir -p storage/uploads storage/sessions storage/converted_images logs && \
-    chmod -R 777 storage logs
+# Create storage directories for resumes and JSON documents, and grant execution rights to entrypoint
+RUN mkdir -p storage/uploads storage/sessions storage/converted_images uploads logs && \
+    chmod -R 777 storage uploads logs && \
+    chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 5000
 
 ENV PORT=5000
 ENV NODE_ENV=production
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "dist/main.js"]

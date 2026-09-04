@@ -1,4 +1,4 @@
-/* Dashboard Styles */
+/* Dashboard Styles — Emerald Blue Hybrid Theme */
 
 .dashboard-page {
   display: flex;
@@ -18,12 +18,17 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: transform var(--trans-normal), box-shadow var(--trans-normal);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--trans-normal), box-shadow var(--trans-normal), border-color var(--trans-normal);
 }
 
 .metric-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: var(--border-medium);
 }
 
 .metric-header {
@@ -85,6 +90,10 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 20px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .chart-header {
@@ -105,6 +114,7 @@
 .chart-title {
   font-size: 1.15rem;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
 .chart-subtitle {
@@ -123,24 +133,25 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
-  background: var(--bg-surface);
+  background: #F8FAFC;
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: 0.78rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all var(--trans-fast);
 }
 
 .cat-toggle-btn:hover {
-  background: var(--bg-surface-elevated);
+  background: #F1F5F9;
   color: var(--text-primary);
 }
 
 .cat-toggle-btn.active {
-  background: var(--color-primary-light);
-  border-color: rgba(99, 102, 241, 0.4);
+  background: #0F766E;
+  border-color: #0F766E;
   color: #FFFFFF;
   font-weight: 600;
 }
@@ -179,8 +190,8 @@
   position: absolute;
   top: 10px;
   right: 20px;
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-medium);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
   padding: 10px 14px;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
@@ -207,7 +218,7 @@
   padding-top: 4px;
   border-top: 1px solid var(--border-subtle);
   font-weight: 700;
-  color: var(--color-success);
+  color: var(--color-primary);
 }
 
 /* Recommended Practice Card */
@@ -217,9 +228,10 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 16px;
-  background: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.15), transparent 60%),
-              var(--bg-glass-card);
-  border-color: rgba(99, 102, 241, 0.25);
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .rec-top-badge {
@@ -229,7 +241,7 @@
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: #67E8F9;
+  color: #0F766E;
 }
 
 .rec-icon-title-wrap {
@@ -247,7 +259,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 18px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 2px 10px rgba(15, 118, 110, 0.25);
   flex-shrink: 0;
 }
 
@@ -273,7 +285,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: #F8FAFC;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
 }
@@ -296,6 +308,10 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .recent-header {
@@ -324,7 +340,7 @@
 
 .recent-item {
   padding: 16px 20px;
-  background: var(--bg-surface);
+  background: #FFFFFF;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   display: flex;
@@ -336,9 +352,10 @@
 }
 
 .recent-item:hover {
-  background: var(--bg-surface-elevated);
+  background: #F8FAFC;
   border-color: var(--border-medium);
-  transform: translateX(4px);
+  transform: translateX(3px);
+  box-shadow: var(--shadow-sm);
 }
 
 .recent-item-main {

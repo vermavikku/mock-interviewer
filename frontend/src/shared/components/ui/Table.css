@@ -3,7 +3,7 @@
   overflow-x: auto;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
+  background: #FFFFFF;
 }
 
 .ui-table {
@@ -15,10 +15,10 @@
 
 .ui-table th {
   padding: 14px 18px;
-  background: var(--bg-surface-elevated);
+  background: #F8FAFC;
   color: var(--text-secondary);
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border-subtle);
@@ -44,7 +44,7 @@
 }
 
 .ui-table tbody tr:hover {
-  background: var(--bg-surface-hover);
+  background: #F8FAFC;
 }
 
 .ui-table-empty {

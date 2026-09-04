@@ -18,9 +18,9 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
-  background: rgba(6, 182, 212, 0.1);
-  border: 1px solid rgba(6, 182, 212, 0.2);
-  color: var(--color-cyan);
+  background: #ECFDF5;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  color: #0F766E;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -30,15 +30,15 @@
 .resumes-main-title {
   margin: 0;
   font-size: 28px;
-  font-weight: 700;
-  color: var(--text-main);
+  font-weight: 800;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .resumes-main-subtitle {
   margin: 6px 0 0;
   font-size: 14px;
-  color: var(--text-dim);
+  color: var(--text-secondary);
   max-width: 650px;
   line-height: 1.5;
 }
@@ -52,8 +52,8 @@
 
 /* Card Design */
 .resumes-vault-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #0f172a;
+  border: 1px solid var(--border-subtle);
+  background: #FFFFFF;
   border-radius: 16px;
   padding: 22px;
   display: flex;
@@ -62,13 +62,13 @@
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-sm);
 }
 
 .resumes-vault-card:hover {
-  border-color: rgba(99, 102, 241, 0.5);
-  transform: translateY(-3px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.2);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 /* Card Header */
@@ -83,18 +83,18 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(99, 102, 241, 0.15);
+  background: #ECFDF5;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #818cf8;
+  color: #0F766E;
   flex-shrink: 0;
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(15, 118, 110, 0.2);
 }
 
 .vault-info-col {
   flex: 1;
-  min-width: 0; /* Allows text ellipsis to work */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -104,7 +104,7 @@
   margin: 0;
   font-size: 15.5px;
   font-weight: 600;
-  color: #f8fafc;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,7 +116,7 @@
   align-items: center;
   gap: 12px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   flex-wrap: wrap;
 }
 
@@ -133,19 +133,19 @@
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 9999px;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
+  background: #EFF6FF;
+  border: 1px solid rgba(29, 78, 216, 0.2);
+  color: #1D4ED8;
 }
 
-/* Extracted Snippet Box (Scrollable) */
+/* Extracted Snippet Box */
 .vault-snippet-box {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #F8FAFC;
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 12px 14px;
   font-size: 12.5px;
-  color: #cbd5e1;
+  color: #334155;
   line-height: 1.55;
   height: 110px;
   max-height: 110px;
@@ -159,17 +159,17 @@
 }
 
 .vault-snippet-box::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: transparent;
   border-radius: 4px;
 }
 
 .vault-snippet-box::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
+  background: var(--border-medium);
   border-radius: 4px;
 }
 
 .vault-snippet-box::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.6);
+  background: var(--color-primary);
 }
 
 /* Card Actions */
@@ -177,7 +177,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 14px;
   margin-top: auto;
 }
@@ -191,7 +191,7 @@
 .vault-delete-btn {
   background: transparent;
   border: 1px solid transparent;
-  color: #64748b;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 7px;
   border-radius: 8px;
@@ -202,8 +202,8 @@
 }
 
 .vault-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
+  background: #FEF2F2;
+  color: var(--color-danger);
   border-color: rgba(239, 68, 68, 0.25);
 }
 

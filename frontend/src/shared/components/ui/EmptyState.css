@@ -5,7 +5,7 @@
   justify-content: center;
   padding: 48px 24px;
   text-align: center;
-  background: var(--bg-surface);
+  background: #FFFFFF;
   border-radius: var(--radius-lg);
   border: 1px dashed var(--border-medium);
 }
@@ -14,8 +14,8 @@
   width: 64px;
   height: 64px;
   border-radius: var(--radius-full);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: #ECFDF5;
+  color: #0F766E;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,7 +24,7 @@
 
 .empty-state-title {
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 6px;
 }

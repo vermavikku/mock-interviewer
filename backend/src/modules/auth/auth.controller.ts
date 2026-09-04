@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -102,5 +102,15 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.changePassword(userId, dto, res);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset account password with strict username/email database validation' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 404, description: 'User account not found' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

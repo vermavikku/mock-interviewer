@@ -17,11 +17,11 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
   const [stageDetails, setStageDetails] = useState('');
 
   const stages = [
-    { title: 'Resume uploaded & verified by NestJS Gateway', key: 'UPLOADED' },
-    { title: 'Converting document to high-res page images (MuPDF + Sharp)', key: 'CONVERTING' },
-    { title: 'Extracting raw text per page (Tesseract.js OCR workers)', key: 'OCR' },
-    { title: 'Synthesizing career history & generating questions (Google Gemini AI)', key: 'GEMINI' },
-    { title: 'Personalized AI interview session ready in BullMQ', key: 'READY' },
+    { title: 'Resume uploaded & verified', key: 'UPLOADED' },
+    { title: 'Processing document layout & pages', key: 'CONVERTING' },
+    { title: 'Extracting candidate profile details', key: 'OCR' },
+    { title: 'Synthesizing career history & formulating questions', key: 'GEMINI' },
+    { title: 'Personalized AI interview session ready', key: 'READY' },
   ];
 
   const completedFiredRef = useRef(false);
@@ -55,7 +55,7 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
     if (!sessionId) {
       // In-flight upload phase before sessionId is issued
       setTargetStep(0);
-      setStageDetails('Uploading resume file to NestJS gateway...');
+      setStageDetails('Uploading resume document...');
       return;
     }
 
@@ -125,11 +125,11 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
             setStageDetails(lastLog.message);
           }
         } else if (status === 'CONVERTING_DOC') {
-          setStageDetails('Converting PDF pages into high-res images...');
+          setStageDetails('Processing document pages...');
         } else if (status === 'EXTRACTING_OCR') {
-          setStageDetails('Extracting candidate profile text via OCR worker pool...');
+          setStageDetails('Extracting candidate profile details...');
         } else if (status === 'GENERATING_QUESTIONS') {
-          setStageDetails('Google Gemini AI is synthesizing tailored questions and coding problems...');
+          setStageDetails('AI is synthesizing tailored questions and coding challenges...');
         }
 
         if (status === 'READY' && calculated === 4) {
@@ -162,9 +162,9 @@ export function ResumeProcessingLoader({ sessionId, onComplete, onError }) {
       </div>
 
       <div className="processing-headings">
-        <h3 className="processing-title">Analyzing Your Resume with Gemini...</h3>
+        <h3 className="processing-title">Analyzing Your Resume with AI...</h3>
         <p className="processing-subtitle">
-          {stageDetails || 'NestJS Gateway, BullMQ, and Google AI Studio are synthesizing your profile into a realistic mock interview'}
+          {stageDetails || 'AI is analyzing your experience and preparing a realistic mock interview'}
         </p>
       </div>
 

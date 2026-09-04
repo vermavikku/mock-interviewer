@@ -14,8 +14,8 @@ const overlayStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 16,
-  background: 'var(--bg-primary, #0a0d14)',
-  color: '#94a3b8',
+  background: 'var(--bg-app, #F6F8F7)',
+  color: 'var(--text-secondary, #64748B)',
   animation: 'authFadeIn 0.3s ease-out',
 };
 
@@ -40,10 +40,10 @@ function AuthCheckSpinner({ message = 'Verifying session…' }) {
   return (
     <div style={overlayStyle}>
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={44} className="stage-spinner" style={{ color: '#6366f1' }} />
-        <ShieldCheck size={20} style={{ position: 'absolute', color: '#818cf8' }} />
+        <Loader2 size={44} className="stage-spinner" style={{ color: '#0F766E' }} />
+        <ShieldCheck size={20} style={{ position: 'absolute', color: '#14B8A6' }} />
       </div>
-      <span style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 500 }}>
+      <span style={{ fontSize: '0.9rem', color: 'var(--text-primary, #0F172A)', fontWeight: 500 }}>
         {message}
       </span>
     </div>

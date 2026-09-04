@@ -180,7 +180,7 @@ export function ProfilePage() {
       {/* Account Performance Metric Cards */}
       <div className="profile-stats-grid animate-fade-in">
         <div className="profile-stat-card glass-panel">
-          <div className="profile-stat-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
+          <div className="profile-stat-icon" style={{ background: 'rgba(15, 118, 110, 0.15)', color: '#0F766E' }}>
             <Award size={24} />
           </div>
           <div className="profile-stat-info">
@@ -214,8 +214,8 @@ export function ProfilePage() {
             <Shield size={24} />
           </div>
           <div className="profile-stat-info">
-            <span className="profile-stat-val">v{user?.tokenVersion ?? 0}</span>
-            <span className="profile-stat-lbl">Active Token Version</span>
+            <span className="profile-stat-val">Protected</span>
+            <span className="profile-stat-lbl">Security Status</span>
           </div>
         </div>
       </div>
@@ -246,7 +246,7 @@ export function ProfilePage() {
           onClick={() => setActiveTab('tokens')}
         >
           <Shield size={16} />
-          <span>JWT & HttpOnly Session</span>
+          <span>Session & Privacy</span>
         </button>
       </div>
 
@@ -293,7 +293,7 @@ export function ProfilePage() {
               />
 
               <div>
-                <label className="input-label" style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>
+                <label className="input-label" style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-primary, #0F172A)' }}>
                   Seniority Level
                 </label>
                 <select
@@ -311,7 +311,7 @@ export function ProfilePage() {
               </div>
 
               <div className="form-group-full">
-                <label className="input-label" style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>
+                <label className="input-label" style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-primary, #0F172A)' }}>
                   Professional Bio & Interview Goals
                 </label>
                 <textarea
@@ -342,7 +342,7 @@ export function ProfilePage() {
           <div className="panel-header-block">
             <h3 className="panel-title">Security & Password Management</h3>
             <p className="panel-desc">
-              Passwords are encrypted using bcrypt (10 rounds). Updating your password will increment your token version and revoke previous device sessions.
+              Your account is secured with enterprise-grade encryption. Updating your password will immediately revoke prior device sessions.
             </p>
           </div>
 
@@ -350,16 +350,16 @@ export function ProfilePage() {
             <div className="security-status-card">
               <Lock size={20} className="sec-icon text-success" />
               <div>
-                <h4 className="sec-title">Bcrypt Encrypted</h4>
-                <p className="sec-desc">10 salt rounds with non-reversible irreversible hashing.</p>
+                <h4 className="sec-title">Enterprise Encryption</h4>
+                <p className="sec-desc">Irreversible cryptographic hashing protects your credentials.</p>
               </div>
             </div>
 
             <div className="security-status-card">
               <Shield size={20} className="sec-icon text-primary" />
               <div>
-                <h4 className="sec-title">Active Token Version {user?.tokenVersion ?? 0}</h4>
-                <p className="sec-desc">Tokens signed with version mismatch are automatically rejected.</p>
+                <h4 className="sec-title">Active Session Guard</h4>
+                <p className="sec-desc">Unauthorized or outdated sessions are automatically rejected.</p>
               </div>
             </div>
           </div>
@@ -423,43 +423,43 @@ export function ProfilePage() {
         </div>
       )}
 
-      {/* Tab 3: JWT & HttpOnly Session Info */}
+      {/* Tab 3: Session & Privacy Info */}
       {activeTab === 'tokens' && (
         <div className="profile-panel-card glass-panel animate-fade-in">
           <div className="panel-header-block">
-            <h3 className="panel-title">HttpOnly Cookie Architecture & Token Status</h3>
+            <h3 className="panel-title">Session Security & Privacy Architecture</h3>
             <p className="panel-desc">
-              Your authentication tokens are stored exclusively in HttpOnly secure cookies, fully immune to browser XSS attacks.
+              Your authentication session is protected with isolated secure cookies, keeping your data shielded from client-side vulnerabilities.
             </p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-            <div className="security-status-card" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
-              <Shield size={22} className="text-primary" style={{ marginTop: 2 }} />
+            <div className="security-status-card" style={{ background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)' }}>
+              <Shield size={22} className="text-primary" style={{ marginTop: 2, color: '#0F766E' }} />
               <div>
-                <h4 className="sec-title" style={{ color: '#818cf8' }}>Access Token (1-Hour Expiration)</h4>
-                <p className="sec-desc" style={{ color: '#c7d2fe' }}>
-                  Sent automatically in the <code>access_token</code> HttpOnly cookie on all API calls. Signed with JWT Secret and validated by Passport on every request.
+                <h4 className="sec-title" style={{ color: '#0F766E' }}>Protected Access Session</h4>
+                <p className="sec-desc" style={{ color: 'var(--text-secondary, #64748B)' }}>
+                  Session authentication is verified cryptographically on each request to safeguard all interview responses and recordings.
                 </p>
               </div>
             </div>
 
-            <div className="security-status-card" style={{ background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.25)' }}>
-              <RefreshCw size={22} className="text-cyan" style={{ marginTop: 2 }} />
+            <div className="security-status-card" style={{ background: 'rgba(14, 165, 233, 0.08)', border: '1px solid rgba(14, 165, 233, 0.25)' }}>
+              <RefreshCw size={22} className="text-cyan" style={{ marginTop: 2, color: '#0EA5E9' }} />
               <div>
-                <h4 className="sec-title" style={{ color: '#22d3ee' }}>Refresh Token (7-Day Expiration & Auto-Refresh)</h4>
-                <p className="sec-desc" style={{ color: '#e0f2fe' }}>
-                  Stored in the <code>refresh_token</code> HttpOnly cookie. When the 1-hour access token expires (401), the frontend interceptor transparently requests a new access token without interrupting your interview.
+                <h4 className="sec-title" style={{ color: '#0EA5E9' }}>Seamless Session Continuity</h4>
+                <p className="sec-desc" style={{ color: 'var(--text-secondary, #64748B)' }}>
+                  Continuous background renewal ensures that your live mock interviews and coding submissions are never interrupted by unexpected session timeouts.
                 </p>
               </div>
             </div>
 
             <div className="security-status-card" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-              <Layers size={22} className="text-success" style={{ marginTop: 2 }} />
+              <Layers size={22} className="text-success" style={{ marginTop: 2, color: '#10B981' }} />
               <div>
-                <h4 className="sec-title" style={{ color: '#34d399' }}>Microservice Service-to-Service Secret</h4>
-                <p className="sec-desc" style={{ color: '#d1fae5' }}>
-                  Direct communication between the Gateway (:5000) and downstream microservices (OCR :3001, Image-Processing :3000) is protected by <code>x-internal-secret</code> headers.
+                <h4 className="sec-title" style={{ color: '#047857' }}>Encrypted Internal Infrastructure</h4>
+                <p className="sec-desc" style={{ color: 'var(--text-secondary, #64748B)' }}>
+                  All background document parsing, question synthesis, and evaluation channels communicate over an encrypted, isolated private network.
                 </p>
               </div>
             </div>

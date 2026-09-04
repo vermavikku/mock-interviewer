@@ -27,23 +27,23 @@ export function ConfirmModal({
             width: 52,
             height: 52,
             borderRadius: '50%',
-            background: isDanger ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.15)',
-            color: isDanger ? '#f87171' : '#818cf8',
+            background: isDanger ? 'rgba(239, 68, 68, 0.15)' : 'rgba(15, 118, 110, 0.15)',
+            color: isDanger ? '#ef4444' : '#0F766E',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 16,
-            border: isDanger ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(99, 102, 241, 0.3)',
+            border: isDanger ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(15, 118, 110, 0.3)',
           }}
         >
           <Icon size={26} />
         </div>
 
-        <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary, #0F172A)' }}>
           {title}
         </h3>
 
-        <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#94a3b8', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 24px', fontSize: 13.5, color: 'var(--text-secondary, #64748B)', lineHeight: 1.5 }}>
           {message}
         </p>
 

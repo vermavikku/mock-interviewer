@@ -8,7 +8,7 @@
 .ui-select-label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .ui-select-wrapper {
@@ -28,11 +28,11 @@
 .ui-select-field {
   width: 100%;
   padding: 10px 36px 10px 14px;
-  background: var(--bg-glass-input);
+  background: #FFFFFF;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   outline: none;
   cursor: pointer;
   appearance: none;
@@ -41,7 +41,7 @@
 }
 
 .ui-select-field option {
-  background: var(--bg-surface-elevated);
+  background: #FFFFFF;
   color: var(--text-primary);
 }
 
@@ -51,7 +51,6 @@
 
 .ui-select-field:focus {
   border-color: var(--color-primary);
-  background: var(--bg-surface);
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 

@@ -106,3 +106,16 @@ export class ChangePasswordDto {
   @MinLength(6)
   newPassword: string;
 }
+
+export class ResetPasswordDto {
+  @ApiProperty({ description: 'Username or Registered Email address', example: 'alex_vance' })
+  @IsString()
+  @IsNotEmpty()
+  identifier: string;
+
+  @ApiProperty({ description: 'New account password (minimum 6 characters)', example: 'NewSecurePassword456!' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  newPassword: string;
+}

@@ -125,11 +125,15 @@ export function ResumesPage() {
     if (!resumeToDelete) return;
     setDeleting(true);
     try {
-      await api.deleteSession(resumeToDelete.sessionId);
-      setResumes((prev) => prev.filter((r) => r.sessionId !== resumeToDelete.sessionId));
+      await api.deleteResume(resumeToDelete.sessionId);
+      setResumes((prev) =>
+        prev.filter(
+          (r) => r.sessionId !== resumeToDelete.sessionId && r.fileName !== resumeToDelete.fileName
+        )
+      );
       toast.info(`Deleted "${resumeToDelete.fileName}" from vault`);
     } catch (err) {
-      toast.error('Failed to delete resume file');
+      toast.error(err.message || 'Failed to delete resume file');
     } finally {
       setResumeToDelete(null);
       setDeleting(false);

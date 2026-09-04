@@ -40,7 +40,30 @@ services:
       retries: 5
 
   # =========================================================================
-  # 3. Image Processing Microservice (MuPDF WASM + Sharp Engine)
+  # 3. PostgreSQL Relational Database (NestJS + Prisma Store)
+  # =========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: mock-interviewer-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mock_interviewer}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mock-interviewer-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mock_interviewer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # 4. Image Processing Microservice (MuPDF WASM + Sharp Engine)
   # =========================================================================
   image-processing:
     build:
@@ -65,7 +88,7 @@ services:
       - mock-interviewer-net
 
   # =========================================================================
-  # 4. OCR Microservice (Tesseract.js Engine + Fast Extractor)
+  # 5. OCR Microservice (Tesseract.js Engine + Fast Extractor)
   # =========================================================================
   ocr:
     build:
@@ -88,7 +111,7 @@ services:
       - mock-interviewer-net
 
   # =========================================================================
-  # 5. Backend Gateway & AI Orchestrator (NestJS + Prisma + BullMQ)
+  # 6. Backend Gateway & AI Orchestrator (NestJS + Prisma + BullMQ)
   # =========================================================================
   backend:
     build:
@@ -101,6 +124,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mock_interviewer?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - IMAGE_PROCESSING_URL=http://image-processing:3000
@@ -109,7 +133,10 @@ services:
       - "5000:5000"
     volumes:
       - backend_storage:/app/storage
+      - image_uploads:/app/uploads
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       image-processing:
@@ -120,7 +147,7 @@ services:
       - mock-interviewer-net
 
   # =========================================================================
-  # 6. Frontend SPA (Vite + React 19 + Nginx Alpine)
+  # 7. Frontend SPA (Vite + React 19 + Nginx Alpine)
   # =========================================================================
   frontend:
     build:
@@ -150,6 +177,8 @@ volumes:
   redis_data:
     driver: local
   mongo_data:
+    driver: local
+  postgres_data:
     driver: local
   image_uploads:
     driver: local

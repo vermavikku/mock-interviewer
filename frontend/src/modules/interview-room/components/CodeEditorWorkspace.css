@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────
-   Code Editor Workspace — Pitch-Black IDE & Terminal Styling
+   Code Editor Workspace — IDE & Terminal Styling (Emerald/Cyan/Dark)
    ───────────────────────────────────────────────────────── */
 
 /* Root Container */
@@ -9,7 +9,7 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #000000;
+  background: #020707;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -20,7 +20,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 14px;
-  background: #080A0E;
+  background: #050E0E;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
   min-height: 44px;
@@ -67,9 +67,9 @@
 .live-editor-pill {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #58A6FF;
-  background: rgba(88, 166, 255, 0.12);
-  border: 1px solid rgba(88, 166, 255, 0.25);
+  color: #14B8A6;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(20, 184, 166, 0.25);
   padding: 2px 10px;
   border-radius: 20px;
   letter-spacing: 0.5px;
@@ -107,7 +107,7 @@
 /* ─── Problem Statement Banner ─── */
 .problem-statement-bar {
   padding: 10px 16px;
-  background: linear-gradient(135deg, rgba(88, 166, 255, 0.06), rgba(139, 92, 246, 0.06));
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.08), rgba(14, 165, 233, 0.06));
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
@@ -118,7 +118,7 @@
   gap: 5px;
   font-size: 0.65rem;
   font-weight: 800;
-  color: #A371F7;
+  color: #14B8A6;
   letter-spacing: 0.8px;
   margin-bottom: 4px;
 }
@@ -146,7 +146,7 @@
   position: relative;
   min-height: 0;
   overflow: hidden;
-  background: #000000;
+  background: #020707;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -154,7 +154,7 @@
   display: flex;
   flex-direction: column;
   padding: 14px 10px 14px 14px;
-  background: #05070A;
+  background: #040A0A;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   user-select: none;
   text-align: right;
@@ -170,7 +170,7 @@
   flex: 1;
   width: 100%;
   height: 100%;
-  background: #000000;
+  background: #020707;
   border: none;
   outline: none;
   resize: none;
@@ -179,7 +179,7 @@
   font-size: 0.84rem;
   line-height: 1.6;
   color: #E6EDF3;
-  caret-color: #58A6FF;
+  caret-color: #14B8A6;
   tab-size: 2;
   white-space: pre;
   overflow-x: auto;
@@ -188,7 +188,7 @@
 }
 
 .code-textarea:focus {
-  background: #030508;
+  background: #030A0A;
 }
 
 /* ─── Console Pane (Right) ─── */
@@ -197,7 +197,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  background: #020408;
+  background: #020606;
 }
 
 .console-header {
@@ -205,7 +205,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: #080A0E;
+  background: #050E0E;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
@@ -220,7 +220,7 @@
 }
 
 .console-title svg {
-  color: #3FB950;
+  color: #34D399;
 }
 
 .console-controls {
@@ -241,9 +241,9 @@
 }
 
 .exit-status-pill.success {
-  color: #3FB950;
-  background: rgba(63, 185, 80, 0.12);
-  border: 1px solid rgba(63, 185, 80, 0.3);
+  color: #34D399;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
 }
 
 .exit-status-pill.error {
@@ -277,7 +277,7 @@
   overflow-y: auto;
   overflow-x: auto;
   padding: 16px;
-  background: #020408;
+  background: #020606;
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 0.82rem;
   line-height: 1.6;
@@ -291,13 +291,13 @@
 }
 
 .prompt-symbol {
-  color: #3FB950;
+  color: #34D399;
   font-weight: 700;
   user-select: none;
 }
 
 .prompt-cmd {
-  color: #58A6FF;
+  color: #0EA5E9;
   font-weight: 600;
 }
 
@@ -311,7 +311,7 @@
   display: inline-block;
   width: 7px;
   height: 14px;
-  background: #3FB950;
+  background: #34D399;
   margin-left: 4px;
   animation: blink 1s step-end infinite;
 }
@@ -389,8 +389,8 @@
 .terminal-spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(88, 166, 255, 0.2);
-  border-top-color: #58A6FF;
+  border: 2px solid rgba(20, 184, 166, 0.2);
+  border-top-color: #14B8A6;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -408,7 +408,7 @@
   justify-content: flex-end;
   gap: 12px;
   padding: 10px 16px;
-  background: #080A0E;
+  background: #050E0E;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }

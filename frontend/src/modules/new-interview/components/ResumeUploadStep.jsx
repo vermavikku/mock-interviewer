@@ -140,7 +140,7 @@ export function ResumeUploadStep() {
       <div className="upload-hero-text">
         <h3 className="upload-main-title">Attach or Choose Your Resume</h3>
         <p className="upload-main-subtitle">
-          Upload a new resume document or select from previously uploaded resumes to formulate authentic Gemini interview questions.
+          Upload a new resume document or select from previously uploaded resumes to formulate authentic AI interview questions.
         </p>
       </div>
 
@@ -148,7 +148,7 @@ export function ResumeUploadStep() {
       {activeResume && (
         <div className="uploaded-resume-card glass-panel animate-pop-in" style={{ marginBottom: 24, border: '1px solid var(--color-primary)' }}>
           <div className="uploaded-file-row">
-            <div className="file-icon-wrap" style={{ background: 'rgba(99, 102, 241, 0.2)', color: 'var(--color-primary)' }}>
+            <div className="file-icon-wrap" style={{ background: 'rgba(15, 118, 110, 0.15)', color: 'var(--color-primary)' }}>
               <FileText size={28} />
             </div>
 
@@ -293,21 +293,21 @@ export function ResumeUploadStep() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    border: isSelected ? '1px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.06)',
-                    background: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255,255,255,0.02)',
+                    border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--border-subtle)',
+                    background: isSelected ? 'rgba(15, 118, 110, 0.08)' : '#FFFFFF',
                     borderRadius: 10,
                   }}
                 >
                   <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 8, background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 8, background: 'rgba(15, 118, 110, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F766E' }}>
                       <FileText size={22} />
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text-main)' }}>
+                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
                           {resume.fileName}
                         </h4>
-                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'var(--text-dim)' }}>
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: '#F1F5F9', color: 'var(--text-secondary)' }}>
                           {formatFileSize(resume.fileSize)}
                         </span>
                       </div>

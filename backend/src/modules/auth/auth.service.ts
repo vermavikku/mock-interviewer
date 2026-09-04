@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
-import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, ChangePasswordDto, ResetPasswordDto } from './dto/auth.dto';
 
 const COOKIE_ACCESS_NAME = 'access_token';
 const COOKIE_REFRESH_NAME = 'refresh_token';
@@ -341,6 +341,43 @@ export class AuthService {
       success: true,
       message: 'Password changed successfully. All other devices logged out.',
       user: safeUser,
+    };
+  }
+
+  /**
+   * Resets forgotten password with strict user existence validation and revokes active sessions
+   */
+  async resetPassword(dto: ResetPasswordDto) {
+    const cleanIdentifier = dto.identifier.toLowerCase().trim();
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: cleanIdentifier }, { username: cleanIdentifier }],
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `No account found with username or email '${dto.identifier}'. Please verify your credentials or register a new account.`,
+      );
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(dto.newPassword, saltRounds);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 },
+      },
+    });
+
+    this.logger.log(`Password reset successfully for user: ${user.username} (${user.id})`);
+
+    return {
+      success: true,
+      message: 'Your password has been successfully reset. Please log in with your new password.',
     };
   }
 

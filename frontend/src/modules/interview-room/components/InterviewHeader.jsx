@@ -94,9 +94,9 @@ export function InterviewHeader({
                   padding: '3px 10px',
                   borderRadius: '12px',
                   fontWeight: 700,
-                  background: 'rgba(99, 102, 241, 0.2)',
-                  color: '#818cf8',
-                  border: '1px solid rgba(99, 102, 241, 0.4)',
+                  background: 'rgba(15, 118, 110, 0.25)',
+                  color: '#14B8A6',
+                  border: '1px solid rgba(20, 184, 166, 0.4)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
@@ -133,17 +133,17 @@ export function InterviewHeader({
               padding: '2px 8px',
               borderRadius: '12px',
               fontWeight: 600,
-              background: isGemini ? 'rgba(6, 182, 212, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-              color: isGemini ? '#22d3ee' : '#fbbf24',
-              border: isGemini ? '1px solid rgba(6, 182, 212, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+              background: 'rgba(6, 182, 212, 0.15)',
+              color: '#22d3ee',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
               marginTop: 4,
             }}
-            title={isGemini ? 'Questions generated live via Google Gemini AI' : 'Questions generated via Local Smart Generator (Fallback)'}
+            title="Questions dynamically generated based on your profile"
           >
-            {isGemini ? '🤖 Google Gemini AI' : '⚡ Smart Local Fallback'}
+            ✨ Adaptive AI
           </span>
         </div>
 

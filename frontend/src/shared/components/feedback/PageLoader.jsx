@@ -20,7 +20,7 @@ export function PageLoader({ text = 'Preparing AI session...' }) {
         alignItems: 'center',
         justifyContent: 'center',
         color: '#fff',
-        boxShadow: '0 0 24px rgba(99, 102, 241, 0.4)',
+        boxShadow: '0 0 20px rgba(15, 118, 110, 0.35)',
         animation: 'float 3s ease-in-out infinite'
       }}>
         <Sparkles size={28} />

@@ -86,7 +86,7 @@ export function ChatInputBar({
       )}
 
       {/* Main Input Box */}
-      <div className="chat-input-main-card glass-panel">
+      <div className="chat-input-main-card">
         <textarea
           ref={textareaRef}
           rows={2}

@@ -9,7 +9,7 @@
 .ui-input-label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .ui-input-wrapper {
@@ -30,17 +30,17 @@
 .ui-input-field {
   width: 100%;
   padding: 10px 14px;
-  background: var(--bg-glass-input);
+  background: #FFFFFF;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   outline: none;
   transition: all var(--trans-fast);
 }
 
 .ui-input-field::placeholder {
-  color: var(--text-dim);
+  color: var(--text-muted);
 }
 
 .ui-input-field.has-icon {
@@ -53,7 +53,6 @@
 
 .ui-input-field:focus {
   border-color: var(--color-primary);
-  background: var(--bg-surface);
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 

@@ -56,8 +56,8 @@ export function PracticePerformanceChart() {
 
   const categories = [
     { key: 'all', label: 'All Dimensions', color: 'var(--color-primary)' },
-    { key: 'technical', label: `Technical (${hasData ? latest.technical + '%' : 'N/A'})`, color: '#6366F1' },
-    { key: 'communication', label: `Communication (${hasData ? latest.communication + '%' : 'N/A'})`, color: '#06B6D4' },
+    { key: 'technical', label: `Technical (${hasData ? latest.technical + '%' : 'N/A'})`, color: '#0F766E' },
+    { key: 'communication', label: `Communication (${hasData ? latest.communication + '%' : 'N/A'})`, color: '#0EA5E9' },
     { key: 'problemSolving', label: `Problem Solving (${hasData ? latest.problemSolving + '%' : 'N/A'})`, color: '#10B981' },
   ];
 
@@ -66,7 +66,7 @@ export function PracticePerformanceChart() {
       <div className="chart-header">
         <div>
           <div className="chart-badge-title">
-            <Sparkles size={16} className="text-cyan" />
+            <Sparkles size={16} className="text-cyan" style={{ color: '#0F766E' }} />
             <h3 className="chart-title">Interview Performance Progression</h3>
           </div>
           <p className="chart-subtitle">
@@ -102,8 +102,8 @@ export function PracticePerformanceChart() {
           <svg viewBox={`0 0 ${width} ${height}`} className="performance-svg" preserveAspectRatio="none">
             <defs>
               <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#6366F1" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#6366F1" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#0F766E" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#0F766E" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -112,8 +112,8 @@ export function PracticePerformanceChart() {
               const y = getY(score);
               return (
                 <g key={score}>
-                  <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-                  <text x={paddingX - 10} y={y + 4} fill="var(--text-dim)" fontSize="10" textAnchor="end">
+                  <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="#E2E8F0" strokeDasharray="3 3" />
+                  <text x={paddingX - 10} y={y + 4} fill="var(--text-secondary)" fontSize="10" textAnchor="end">
                     {score}%
                   </text>
                 </g>
@@ -122,10 +122,10 @@ export function PracticePerformanceChart() {
 
             {/* Lines */}
             {(activeCategory === 'all' || activeCategory === 'technical') && createPath('technical') && (
-              <path d={createPath('technical')} fill="none" stroke="#6366F1" strokeWidth="2.5" strokeLinecap="round" />
+              <path d={createPath('technical')} fill="none" stroke="#0F766E" strokeWidth="2.5" strokeLinecap="round" />
             )}
             {(activeCategory === 'all' || activeCategory === 'communication') && createPath('communication') && (
-              <path d={createPath('communication')} fill="none" stroke="#06B6D4" strokeWidth="2.5" strokeLinecap="round" />
+              <path d={createPath('communication')} fill="none" stroke="#0EA5E9" strokeWidth="2.5" strokeLinecap="round" />
             )}
             {(activeCategory === 'all' || activeCategory === 'problemSolving') && createPath('problemSolving') && (
               <path d={createPath('problemSolving')} fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" />
@@ -136,12 +136,12 @@ export function PracticePerformanceChart() {
               const x = getX(i);
               return (
                 <g key={i} className="chart-datapoint-group" onMouseEnter={() => setHoveredPoint(d)} onMouseLeave={() => setHoveredPoint(null)}>
-                  <text x={x} y={height - 6} fill="var(--text-dim)" fontSize="10" textAnchor="middle">
+                  <text x={x} y={height - 6} fill="var(--text-secondary)" fontSize="10" textAnchor="middle">
                     {d.session}
                   </text>
-                  <circle cx={x} cy={getY(d.technical)} r="4" fill="#6366F1" stroke="#0B0F19" strokeWidth="2" />
-                  <circle cx={x} cy={getY(d.communication)} r="4" fill="#06B6D4" stroke="#0B0F19" strokeWidth="2" />
-                  <circle cx={x} cy={getY(d.problemSolving)} r="4" fill="#10B981" stroke="#0B0F19" strokeWidth="2" />
+                  <circle cx={x} cy={getY(d.technical)} r="4" fill="#0F766E" stroke="#FFFFFF" strokeWidth="2" />
+                  <circle cx={x} cy={getY(d.communication)} r="4" fill="#0EA5E9" stroke="#FFFFFF" strokeWidth="2" />
+                  <circle cx={x} cy={getY(d.problemSolving)} r="4" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
                 </g>
               );
             })}
@@ -150,8 +150,8 @@ export function PracticePerformanceChart() {
           {hoveredPoint && (
             <div className="chart-tooltip animate-pop-in">
               <span className="tooltip-title">{hoveredPoint.title || hoveredPoint.session}</span>
-              <div className="tooltip-row"><span style={{ color: '#6366F1' }}>● Technical:</span> {hoveredPoint.technical}%</div>
-              <div className="tooltip-row"><span style={{ color: '#06B6D4' }}>● Communication:</span> {hoveredPoint.communication}%</div>
+              <div className="tooltip-row"><span style={{ color: '#0F766E' }}>● Technical:</span> {hoveredPoint.technical}%</div>
+              <div className="tooltip-row"><span style={{ color: '#0EA5E9' }}>● Communication:</span> {hoveredPoint.communication}%</div>
               <div className="tooltip-row"><span style={{ color: '#10B981' }}>● Problem Solving:</span> {hoveredPoint.problemSolving}%</div>
               <div className="tooltip-avg">Overall Score: {hoveredPoint.avg}%</div>
             </div>

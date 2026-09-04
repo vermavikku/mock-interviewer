@@ -290,7 +290,9 @@ export class InterviewService {
 
     for (const s of sessions) {
       if (!seen.has(s.originalFileName)) {
-        seen.add(s.originalFileName);
+        if (!s.storedFilePath) {
+          continue;
+        }
 
         // Check if physical file exists
         const absPath = path.join(process.cwd(), s.storedFilePath);
@@ -299,10 +301,15 @@ export class InterviewService {
           if (fsSync.existsSync(absPath)) {
             const stat = fsSync.statSync(absPath);
             fileSize = stat.size;
+          } else {
+            // Physical file not found on disk: skip so deleted/ghost resumes are not returned
+            continue;
           }
         } catch (e) {
-          // ignore
+          continue;
         }
+
+        seen.add(s.originalFileName);
 
         const snippet = s.rawExtractedText
           ? s.rawExtractedText.slice(0, 200).replace(/\s+/g, ' ').trim() + '...'
@@ -689,6 +696,63 @@ export class InterviewService {
     return {
       success: true,
       message: `Interview session ${sessionId} deleted successfully`,
+    };
+  }
+
+  /**
+   * Deletes a resume document permanently from the vault across all sessions belonging to the user
+   */
+  async deleteResume(sessionId: string, userId?: string) {
+    const session = await this.prisma.interviewSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Resume session with ID ${sessionId} not found`);
+    }
+
+    if (userId && session.userId && session.userId !== userId) {
+      throw new ForbiddenException('You cannot delete a resume belonging to another candidate');
+    }
+
+    const targetFileName = session.originalFileName;
+
+    // Find all sessions for this user with this originalFileName
+    const matchingSessions = await this.prisma.interviewSession.findMany({
+      where: {
+        userId: userId || session.userId,
+        originalFileName: targetFileName,
+      },
+    });
+
+    for (const s of matchingSessions) {
+      // 1. Clean up physical resume file if present
+      if (s.storedFilePath) {
+        const rawFilePath = path.join(process.cwd(), s.storedFilePath);
+        await fs.unlink(rawFilePath).catch(() => {});
+      }
+
+      // 2. If it's a pure vault document or uncompleted pending session, delete the record completely
+      const isPureVaultDoc = s.title?.includes('Vault Document') || s.status === 'PENDING';
+      if (isPureVaultDoc) {
+        const jsonPath = this.sessionJsonService.getFilePath(s.id);
+        await fs.unlink(jsonPath).catch(() => {});
+        await this.prisma.interviewSession.delete({
+          where: { id: s.id },
+        }).catch(() => {});
+      } else {
+        // 3. If it's a completed/in-progress interview session in history, preserve interview score & transcript,
+        // but clear storedFilePath so it is never returned as an active vault resume.
+        await this.prisma.interviewSession.update({
+          where: { id: s.id },
+          data: { storedFilePath: '' },
+        }).catch(() => {});
+      }
+    }
+
+    return {
+      success: true,
+      message: `Resume "${targetFileName}" deleted from vault successfully`,
     };
   }
 }

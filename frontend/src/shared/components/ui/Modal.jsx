@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import './Modal.css';
@@ -13,25 +14,37 @@ export function Modal({
   showClose = true,
   className = '',
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
+
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      const mainContent = document.querySelector('.app-main-content');
+      if (mainContent) mainContent.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     }
+
     return () => {
       document.body.style.overflow = '';
+      const mainContent = document.querySelector('.app-main-content');
+      if (mainContent) mainContent.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  const modalNode = (
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div
         className={cn('modal-container animate-pop-in', className)}
@@ -59,4 +72,7 @@ export function Modal({
       </div>
     </div>
   );
+
+  const targetContainer = document.fullscreenElement || document.body;
+  return createPortal(modalNode, targetContainer);
 }

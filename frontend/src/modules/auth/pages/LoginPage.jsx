@@ -102,9 +102,9 @@ export function LoginPage() {
         </Button>
 
         <div className="auth-card-links-row">
-          <Link to="/forgot-username" className="auth-link">
+          {/* <Link to="/forgot-username" className="auth-link">
             Forgot Username?
-          </Link>
+          </Link> */}
           <Link to="/forgot-password" className="auth-link">
             Forgot Password?
           </Link>

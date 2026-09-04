@@ -115,6 +115,20 @@ export async function authRegister(userData) {
   return data;
 }
 
+export async function authResetPassword(identifier, newPassword) {
+  const response = await fetch(`${BACKEND_BASE_URL}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, newPassword }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'Password reset failed. Please verify your credentials.');
+  }
+  return data;
+}
+
 export async function authRefreshToken() {
   const response = await fetch(`${BACKEND_BASE_URL}/api/auth/refresh-token`, {
     method: 'POST',
@@ -289,6 +303,17 @@ export async function listUploadedResumes() {
 
 export function getResumeFileUrl(sessionId) {
   return `${BACKEND_BASE_URL}/api/interviews/resumes/${sessionId}/file`;
+}
+
+export async function deleteResume(sessionId) {
+  const response = await fetchWithAuth(`${BACKEND_BASE_URL}/api/interviews/resumes/${sessionId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ message: 'Failed to delete resume' }));
+    throw new Error(err.message || 'Failed to delete resume');
+  }
+  return response.json();
 }
 
 export async function getSessionStatus(sessionId) {

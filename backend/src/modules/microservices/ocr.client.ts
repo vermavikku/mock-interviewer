@@ -46,6 +46,7 @@ export class OcrClient {
     this.logger.log(`Calling OCR service for ${imagePaths.length} image(s) at ${this.baseUrl}/api/ocr/extract`);
 
     const form = new FormData();
+    let validImagesCount = 0;
     for (const imgPath of imagePaths) {
       if (fs.existsSync(imgPath)) {
         const stream = fs.createReadStream(imgPath);
@@ -53,9 +54,17 @@ export class OcrClient {
           filename: path.basename(imgPath),
           contentType: 'image/png',
         });
+        validImagesCount++;
       } else {
         this.logger.warn(`Image file path does not exist on disk: ${imgPath}`);
       }
+    }
+
+    if (imagePaths.length > 0 && validImagesCount === 0) {
+      throw new Error(
+        `None of the ${imagePaths.length} converted image file(s) exist on disk (paths: ${imagePaths.join(', ')}). ` +
+        `Ensure that shared volume 'image_uploads' is mounted to '/app/uploads' in the backend container.`
+      );
     }
 
     if (batchName) {

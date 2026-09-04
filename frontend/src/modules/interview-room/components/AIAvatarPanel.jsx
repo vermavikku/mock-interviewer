@@ -10,21 +10,21 @@ export function AIAvatarPanel({ status = 'Asking', interviewerName = 'Alex', act
       case 'Thinking':
         return {
           label: 'AI Thinking & Evaluating...',
-          color: '#8B5CF6',
+          color: '#14B8A6',
           icon: BrainCircuit,
           className: 'status-thinking',
         };
       case 'Listening':
         return {
           label: 'AI Listening to Answer...',
-          color: '#06B6D4',
+          color: '#0EA5E9',
           icon: Mic,
           className: 'status-listening',
         };
       default:
         return {
           label: 'AI Asking Question',
-          color: '#10B981',
+          color: '#34D399',
           icon: MessageSquareCode,
           className: 'status-asking',
         };
@@ -35,7 +35,7 @@ export function AIAvatarPanel({ status = 'Asking', interviewerName = 'Alex', act
   const StatusIcon = statusConfig.icon;
 
   return (
-    <aside className="ai-interviewer-sidebar glass-panel animate-fade-in">
+    <aside className="ai-interviewer-sidebar animate-fade-in">
       <div className="interviewer-header">
         <span className="interviewer-badge">LEAD AI INTERVIEWER</span>
         <h3 className="interviewer-name">{interviewerName}</h3>

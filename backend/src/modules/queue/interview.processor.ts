@@ -75,7 +75,7 @@ export class InterviewProcessor extends WorkerHost {
           sessionId,
           'DOCUMENT_CONVERSION_STARTED',
           'pending',
-          'Sending document to image-processing microservice',
+          'Processing document layout and pages',
         );
         await job.updateProgress(15);
 
@@ -126,7 +126,7 @@ export class InterviewProcessor extends WorkerHost {
           sessionId,
           'OCR_EXTRACTION_STARTED',
           'pending',
-          `Extracting text via Tesseract.js parallel worker pool for ${imagePathsToOcr.length} image(s)`,
+          `Extracting profile text from ${imagePathsToOcr.length} page(s)`,
         );
 
         const ocrResult = await this.ocrClient.extractTextFromImages(imagePathsToOcr, sessionId);

@@ -57,7 +57,7 @@ export function NewInterviewPage() {
         const sid = res.session?.id || res.data?.session?.id || res.id;
         setActiveSessionId(sid);
       } else if (activeResume.rawFile) {
-        // Real file upload to NestJS Backend Gateway
+        // Upload resume file and initialize session
         const res = await api.uploadResumeAndCreateSession(activeResume.rawFile, activeConfig);
         const sid = res.session?.id || res.data?.session?.id || res.id;
         setActiveSessionId(sid);
@@ -141,7 +141,7 @@ export function NewInterviewPage() {
           </div>
           <h2 className="new-interview-title">Start a New Interview</h2>
           <p className="new-interview-subtitle">
-            Configure your interview scope, attach your resume, and let Google Gemini AI build a personalized practice session.
+            Configure your interview scope, attach your resume, and let AI build a personalized practice session.
           </p>
 
           {/* Stepper Tabs */}

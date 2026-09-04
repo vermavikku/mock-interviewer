@@ -31,7 +31,7 @@ export function InterviewCompletionScreen({ results, onPracticeAgain }) {
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#6366F1', '#8B5CF6', '#06B6D4', '#10B981'],
+        colors: ['#0F766E', '#1D4ED8', '#14B8A6', '#10B981', '#34D399'],
       });
     } catch {
       // Confetti fallback if restricted

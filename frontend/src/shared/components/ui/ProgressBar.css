@@ -25,7 +25,7 @@
 
 .ui-progress-track {
   width: 100%;
-  background: var(--bg-surface-elevated);
+  background: #E2E8F0;
   border-radius: var(--radius-full);
   overflow: hidden;
   position: relative;
@@ -42,25 +42,21 @@
 }
 
 .ui-progress-fill.fill-primary {
-  background: var(--color-primary);
-  box-shadow: 0 0 8px var(--color-primary);
+  background: #0F766E;
 }
 
 .ui-progress-fill.fill-gradient {
-  background: var(--grad-ai);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, #0F766E 0%, #1D4ED8 100%);
 }
 
 .ui-progress-fill.fill-success {
-  background: var(--color-success);
-  box-shadow: 0 0 8px var(--color-success);
+  background: #10B981;
 }
 
 .ui-progress-fill.fill-warning {
-  background: var(--color-warning);
+  background: #F59E0B;
 }
 
 .ui-progress-fill.fill-cyan {
-  background: var(--color-cyan);
-  box-shadow: 0 0 8px var(--color-cyan);
+  background: #0EA5E9;
 }

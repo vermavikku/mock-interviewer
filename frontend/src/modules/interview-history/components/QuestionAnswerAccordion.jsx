@@ -41,8 +41,8 @@ export function QuestionAnswerAccordion({ questions = [] }) {
                 <span
                   className="qa-index-pill"
                   style={{
-                    background: isSkipped ? 'rgba(239, 68, 68, 0.2)' : isCodingTask ? 'rgba(6, 182, 212, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                    color: isSkipped ? '#f87171' : isCodingTask ? '#22d3ee' : '#818cf8',
+                    background: isSkipped ? '#FEF2F2' : isCodingTask ? '#EFF6FF' : '#ECFDF5',
+                    color: isSkipped ? '#EF4444' : isCodingTask ? '#1D4ED8' : '#0F766E',
                   }}
                 >
                   Q{idx + 1}
@@ -57,9 +57,9 @@ export function QuestionAnswerAccordion({ questions = [] }) {
                       letterSpacing: '0.04em',
                       padding: '2px 8px',
                       borderRadius: 4,
-                      background: 'rgba(6, 182, 212, 0.15)',
-                      color: '#22d3ee',
-                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                      background: '#EFF6FF',
+                      color: '#1D4ED8',
+                      border: '1px solid rgba(29, 78, 216, 0.25)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
@@ -87,22 +87,22 @@ export function QuestionAnswerAccordion({ questions = [] }) {
             {isOpen && (
               <div className="qa-accordion-body animate-fade-in">
                 {/* Candidate Answer / Code */}
-                <div className="qa-answer-block" style={{ borderLeft: isSkipped ? '3px solid #ef4444' : isCodingTask ? '3px solid #06b6d4' : '3px solid #6366f1' }}>
+                <div className="qa-answer-block" style={{ borderLeft: isSkipped ? '3px solid #EF4444' : isCodingTask ? '3px solid #1D4ED8' : '3px solid #0F766E' }}>
                   <div className="qa-author-label user-label">
                     <User size={14} />
                     <span>{isSkipped ? 'Candidate Response: (Skipped)' : isCodingTask ? 'Your Submitted Code Solution:' : 'Your Answer:'}</span>
                   </div>
                   {q.code ? (
-                    <div className="qa-code-sub-block" style={{ marginTop: 8, background: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
-                      <div className="qa-code-lang" style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.05)', fontSize: 11, color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.06)', textTransform: 'uppercase' }}>
+                    <div className="qa-code-sub-block" style={{ marginTop: 8, background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
+                      <div className="qa-code-lang" style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.06)', fontSize: 11, color: '#94A3B8', borderBottom: '1px solid rgba(255,255,255,0.08)', textTransform: 'uppercase' }}>
                         {q.language || q.codingDetails?.language || 'javascript'}
                       </div>
-                      <pre className="qa-code-pre" style={{ margin: 0, padding: 14, fontSize: 13, color: '#f1f5f9', overflowX: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
+                      <pre className="qa-code-pre" style={{ margin: 0, padding: 14, fontSize: 13, color: '#F8FAFC', overflowX: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
                         <code>{q.code}</code>
                       </pre>
                     </div>
                   ) : (
-                    <p className="qa-answer-text" style={{ color: isSkipped ? '#94a3b8' : '#cbd5e1', whiteSpace: 'pre-wrap' }}>
+                    <p className="qa-answer-text" style={{ color: isSkipped ? '#64748B' : 'var(--text-primary, #0F172A)', whiteSpace: 'pre-wrap' }}>
                       {answerText || '[No spoken or written answer submitted]'}
                     </p>
                   )}
@@ -124,18 +124,18 @@ export function QuestionAnswerAccordion({ questions = [] }) {
                   <div
                     style={{
                       marginTop: 14,
-                      background: 'rgba(6, 182, 212, 0.06)',
-                      border: '1px solid rgba(6, 182, 212, 0.25)',
+                      background: '#F0FDFA',
+                      border: '1px solid rgba(15, 118, 110, 0.25)',
                       borderRadius: 10,
                       padding: '14px 16px',
                       fontSize: 13,
                       lineHeight: 1.55,
-                      color: '#cffafe',
+                      color: '#0F172A',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Sparkles size={15} style={{ color: '#22d3ee' }} />
-                      <strong style={{ color: '#22d3ee', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <Sparkles size={15} style={{ color: '#0F766E' }} />
+                      <strong style={{ color: '#0F766E', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         AI Optimal Code Solution ({q.codingDetails?.language || 'javascript'}):
                       </strong>
                     </div>
@@ -143,13 +143,13 @@ export function QuestionAnswerAccordion({ questions = [] }) {
                       style={{
                         margin: 0,
                         padding: 12,
-                        background: '#090d16',
+                        background: '#0F172A',
                         borderRadius: 6,
-                        color: '#38bdf8',
+                        color: '#38BDF8',
                         fontSize: 12.5,
                         overflowX: 'auto',
                         fontFamily: 'JetBrains Mono, monospace',
-                        border: '1px solid rgba(6, 182, 212, 0.2)',
+                        border: '1px solid rgba(15, 118, 110, 0.2)',
                       }}
                     >
                       <code>{idealCode}</code>
@@ -162,22 +162,22 @@ export function QuestionAnswerAccordion({ questions = [] }) {
                   <div
                     style={{
                       marginTop: 14,
-                      background: 'rgba(16, 185, 129, 0.08)',
+                      background: '#ECFDF5',
                       border: '1px solid rgba(16, 185, 129, 0.25)',
                       borderRadius: 10,
                       padding: '14px 16px',
                       fontSize: 13,
                       lineHeight: 1.55,
-                      color: '#d1fae5',
+                      color: '#065F46',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <Sparkles size={15} style={{ color: '#34d399' }} />
-                      <strong style={{ color: '#34d399', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <Sparkles size={15} style={{ color: '#10B981' }} />
+                      <strong style={{ color: '#047857', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         AI Recommended Architecture / Solution Walkthrough:
                       </strong>
                     </div>
-                    <div style={{ whiteSpace: 'pre-wrap', color: '#a7f3d0' }}>
+                    <div style={{ whiteSpace: 'pre-wrap', color: '#065F46' }}>
                       {q.idealAnswer}
                     </div>
                   </div>

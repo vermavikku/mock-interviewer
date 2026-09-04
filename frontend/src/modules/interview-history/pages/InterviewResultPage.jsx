@@ -145,7 +145,7 @@ export function InterviewResultPage() {
         particleCount: 90,
         spread: 75,
         origin: { y: 0.55 },
-        colors: ['#6366F1', '#8B5CF6', '#06B6D4', '#10B981'],
+        colors: ['#0F766E', '#1D4ED8', '#34D399', '#0EA5E9', '#10B981'],
       });
     } catch {
       // Handled silently
@@ -267,7 +267,7 @@ export function InterviewResultPage() {
       <div className="subscores-grid">
         <div className="subscore-card glass-panel">
           <div className="subscore-header">
-            <div className="subscore-icon-box" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
+            <div className="subscore-icon-box" style={{ background: 'rgba(15, 118, 110, 0.15)', color: '#0F766E' }}>
               <Code2 size={20} />
             </div>
             <span className="subscore-val">{subScores.technical}%</span>
@@ -278,7 +278,7 @@ export function InterviewResultPage() {
 
         <div className="subscore-card glass-panel">
           <div className="subscore-header">
-            <div className="subscore-icon-box" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#22d3ee' }}>
+            <div className="subscore-icon-box" style={{ background: 'rgba(29, 78, 216, 0.12)', color: '#1D4ED8' }}>
               <MessageSquare size={20} />
             </div>
             <span className="subscore-val">{subScores.communication}%</span>
@@ -289,7 +289,7 @@ export function InterviewResultPage() {
 
         <div className="subscore-card glass-panel">
           <div className="subscore-header">
-            <div className="subscore-icon-box" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+            <div className="subscore-icon-box" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10B981' }}>
               <Brain size={20} />
             </div>
             <span className="subscore-val">{subScores.problemSolving}%</span>
@@ -300,7 +300,7 @@ export function InterviewResultPage() {
 
         <div className="subscore-card glass-panel">
           <div className="subscore-header">
-            <div className="subscore-icon-box" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
+            <div className="subscore-icon-box" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#D97706' }}>
               <Zap size={20} />
             </div>
             <span className="subscore-val">{subScores.confidence}%</span>
@@ -384,10 +384,11 @@ export function InterviewResultPage() {
                 <div
                   key={q.id || idx}
                   style={{
-                    background: 'rgba(15, 23, 42, 0.7)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: '#FFFFFF',
+                    border: '1px solid var(--border-subtle, #E2E8F0)',
                     borderRadius: 12,
                     padding: 20,
+                    boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05))',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
@@ -397,8 +398,8 @@ export function InterviewResultPage() {
                           width: 24,
                           height: 24,
                           borderRadius: '50%',
-                          background: isSkipped ? 'rgba(239, 68, 68, 0.2)' : isCodingTask ? 'rgba(6, 182, 212, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                          color: isSkipped ? '#f87171' : isCodingTask ? '#22d3ee' : '#818cf8',
+                          background: isSkipped ? '#FEF2F2' : isCodingTask ? '#EFF6FF' : '#ECFDF5',
+                          color: isSkipped ? '#EF4444' : isCodingTask ? '#1D4ED8' : '#0F766E',
                           fontSize: 12,
                           fontWeight: 700,
                           display: 'flex',
@@ -410,7 +411,7 @@ export function InterviewResultPage() {
                         {idx + 1}
                       </span>
                       <div>
-                        <h4 style={{ margin: 0, fontSize: 15.5, fontWeight: 600, color: '#f8fafc', lineHeight: 1.4 }}>
+                        <h4 style={{ margin: 0, fontSize: 15.5, fontWeight: 600, color: 'var(--text-primary, #0F172A)', lineHeight: 1.4 }}>
                           {q.question}
                         </h4>
                         {isCodingTask && (
@@ -422,9 +423,9 @@ export function InterviewResultPage() {
                               letterSpacing: '0.04em',
                               padding: '2px 8px',
                               borderRadius: 4,
-                              background: 'rgba(6, 182, 212, 0.15)',
-                              color: '#22d3ee',
-                              border: '1px solid rgba(6, 182, 212, 0.3)',
+                              background: '#EFF6FF',
+                              color: '#1D4ED8',
+                              border: '1px solid rgba(29, 78, 216, 0.25)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: 4,
@@ -445,16 +446,16 @@ export function InterviewResultPage() {
                   </div>
 
                   {/* Candidate Answer / Code */}
-                  <div style={{ margin: '10px 0 12px 34px', background: 'rgba(0, 0, 0, 0.35)', padding: '12px 14px', borderRadius: 8, fontSize: 13, color: isSkipped ? '#94a3b8' : '#cbd5e1', lineHeight: 1.5, borderLeft: isSkipped ? '3px solid #ef4444' : isCodingTask ? '3px solid #06b6d4' : '3px solid #6366f1' }}>
-                    <strong style={{ color: '#94a3b8', display: 'block', fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ margin: '10px 0 12px 34px', background: '#F8FAFC', padding: '12px 14px', borderRadius: 8, fontSize: 13, color: isSkipped ? '#64748B' : 'var(--text-primary, #0F172A)', lineHeight: 1.5, borderLeft: isSkipped ? '3px solid #EF4444' : isCodingTask ? '3px solid #1D4ED8' : '3px solid #0F766E', border: '1px solid var(--border-subtle, #E2E8F0)' }}>
+                    <strong style={{ color: '#64748B', display: 'block', fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {isSkipped ? 'Candidate Response: (Skipped)' : isCodingTask ? 'Candidate Code Solution:' : 'Candidate Response:'}
                     </strong>
                     {q.code ? (
-                      <div style={{ marginTop: 6, background: '#090d16', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <div style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.04)', fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ marginTop: 6, background: '#0F172A', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.06)', fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                           {q.language || q.codingDetails?.language || 'javascript'}
                         </div>
-                        <pre style={{ margin: 0, padding: 12, fontSize: 12.5, color: '#f8fafc', overflowX: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
+                        <pre style={{ margin: 0, padding: 12, fontSize: 12.5, color: '#F8FAFC', overflowX: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
                           <code>{q.code}</code>
                         </pre>
                       </div>
@@ -467,8 +468,8 @@ export function InterviewResultPage() {
 
                   {/* AI Coaching Feedback */}
                   {q.feedback && (
-                    <div style={{ margin: '0 0 12px 34px', background: 'rgba(6, 182, 212, 0.08)', borderLeft: '3px solid #06b6d4', padding: '10px 14px', borderRadius: '0 8px 8px 0', fontSize: 12.5, color: '#e0f2fe', lineHeight: 1.5 }}>
-                      <strong style={{ color: '#38bdf8', display: 'block', fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ margin: '0 0 12px 34px', background: '#EFF6FF', borderLeft: '3px solid #1D4ED8', border: '1px solid rgba(29, 78, 216, 0.15)', padding: '10px 14px', borderRadius: 8, fontSize: 12.5, color: '#0F172A', lineHeight: 1.5 }}>
+                      <strong style={{ color: '#1D4ED8', display: 'block', fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         AI Evaluator Feedback:
                       </strong>
                       {q.feedback}
@@ -477,10 +478,10 @@ export function InterviewResultPage() {
 
                   {/* AI Optimal Solution Code (if coding challenge) */}
                   {idealCode && (
-                    <div style={{ margin: '0 0 12px 34px', background: 'rgba(6, 182, 212, 0.06)', border: '1px solid rgba(6, 182, 212, 0.25)', padding: '12px 16px', borderRadius: 8, fontSize: 13, color: '#cffafe', lineHeight: 1.55 }}>
+                    <div style={{ margin: '0 0 12px 34px', background: '#F0FDFA', border: '1px solid rgba(15, 118, 110, 0.25)', padding: '12px 16px', borderRadius: 8, fontSize: 13, color: '#0F172A', lineHeight: 1.55 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                        <Sparkles size={14} style={{ color: '#22d3ee' }} />
-                        <strong style={{ color: '#22d3ee', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <Sparkles size={14} style={{ color: '#0F766E' }} />
+                        <strong style={{ color: '#0F766E', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           AI Optimal Code Solution ({q.codingDetails?.language || 'javascript'}):
                         </strong>
                       </div>
@@ -488,13 +489,13 @@ export function InterviewResultPage() {
                         style={{
                           margin: 0,
                           padding: 12,
-                          background: '#090d16',
+                          background: '#0F172A',
                           borderRadius: 6,
-                          color: '#38bdf8',
+                          color: '#38BDF8',
                           fontSize: 12.5,
                           overflowX: 'auto',
                           fontFamily: 'JetBrains Mono, monospace',
-                          border: '1px solid rgba(6, 182, 212, 0.2)',
+                          border: '1px solid rgba(15, 118, 110, 0.2)',
                         }}
                       >
                         <code>{idealCode}</code>
@@ -504,14 +505,14 @@ export function InterviewResultPage() {
 
                   {/* Ideal / Recommended Model Answer for Learning */}
                   {q.idealAnswer && (
-                    <div style={{ margin: '0 0 0 34px', background: 'rgba(16, 185, 129, 0.07)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '12px 16px', borderRadius: 8, fontSize: 13, color: '#d1fae5', lineHeight: 1.55 }}>
+                    <div style={{ margin: '0 0 0 34px', background: '#ECFDF5', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '12px 16px', borderRadius: 8, fontSize: 13, color: '#065F46', lineHeight: 1.55 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                        <Sparkles size={14} style={{ color: '#34d399' }} />
-                        <strong style={{ color: '#34d399', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <Sparkles size={14} style={{ color: '#10B981' }} />
+                        <strong style={{ color: '#047857', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           AI Recommended Architecture / Solution Walkthrough:
                         </strong>
                       </div>
-                      <div style={{ whiteSpace: 'pre-wrap', color: '#a7f3d0' }}>
+                      <div style={{ whiteSpace: 'pre-wrap', color: '#065F46' }}>
                         {q.idealAnswer}
                       </div>
                     </div>

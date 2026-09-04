@@ -35,7 +35,7 @@ export function SummaryMetrics() {
       trend: totalInterviews > 0 ? `${totalInterviews} sessions tracked` : 'Ready to start',
       color: 'var(--color-primary)',
       bgColor: 'var(--color-primary-light)',
-      borderColor: 'rgba(99, 102, 241, 0.3)',
+      borderColor: 'rgba(15, 118, 110, 0.25)',
     },
     {
       label: 'Average Score',
@@ -44,16 +44,16 @@ export function SummaryMetrics() {
       trend: totalInterviews > 0 ? 'Dynamic AI evaluation' : 'No evaluations yet',
       color: 'var(--color-success)',
       bgColor: 'var(--color-success-light)',
-      borderColor: 'rgba(16, 185, 129, 0.3)',
+      borderColor: 'rgba(16, 185, 129, 0.25)',
     },
     {
       label: 'Practice Time',
       value: formattedPracticeTime,
       icon: Clock,
       trend: totalMinutes > 0 ? 'Active preparation' : 'Start your first session',
-      color: 'var(--color-cyan)',
-      bgColor: 'var(--color-cyan-light)',
-      borderColor: 'rgba(6, 182, 212, 0.3)',
+      color: 'var(--color-secondary)',
+      bgColor: 'var(--color-secondary-light)',
+      borderColor: 'rgba(29, 78, 216, 0.25)',
     },
     {
       label: 'Current Streak',
@@ -62,7 +62,7 @@ export function SummaryMetrics() {
       trend: streakDays > 0 ? 'Active momentum 🔥' : 'Start practice streak',
       color: 'var(--color-warning)',
       bgColor: 'var(--color-warning-light)',
-      borderColor: 'rgba(245, 158, 11, 0.3)',
+      borderColor: 'rgba(245, 158, 11, 0.25)',
     },
   ];
 

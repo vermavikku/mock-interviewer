@@ -16,8 +16,8 @@ export function RouteErrorBoundary() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0B0F19',
-        color: '#f8fafc',
+        background: 'var(--bg-app, #F6F8F7)',
+        color: 'var(--text-primary, #0F172A)',
         padding: '24px',
       }}
     >
@@ -25,12 +25,12 @@ export function RouteErrorBoundary() {
         style={{
           maxWidth: '520px',
           width: '100%',
-          background: '#0f172a',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          background: '#FFFFFF',
+          border: '1px solid var(--border-subtle, #E2E8F0)',
           borderRadius: '16px',
           padding: '36px 28px',
           textAlign: 'center',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+          boxShadow: 'var(--shadow-lg, 0 10px 25px rgba(15, 23, 42, 0.08))',
         }}
       >
         <div
@@ -39,7 +39,7 @@ export function RouteErrorBoundary() {
             height: '56px',
             borderRadius: '50%',
             background: 'rgba(239, 68, 68, 0.15)',
-            color: '#f87171',
+            color: '#ef4444',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -50,11 +50,11 @@ export function RouteErrorBoundary() {
           <AlertTriangle size={28} />
         </div>
 
-        <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: '700', color: '#fff' }}>
+        <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: '700', color: 'var(--text-primary, #0F172A)' }}>
           Something went wrong
         </h2>
 
-        <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#94a3b8', lineHeight: '1.6' }}>
+        <p style={{ margin: '0 0 24px', fontSize: '14px', color: 'var(--text-secondary, #64748B)', lineHeight: '1.6' }}>
           {error?.message || 'An unexpected error occurred while loading this page.'}
         </p>
 

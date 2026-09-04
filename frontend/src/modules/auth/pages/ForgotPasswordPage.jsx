@@ -8,6 +8,7 @@ import { PasswordInput } from '../../../shared/components/ui/PasswordInput';
 import { Button } from '../../../shared/components/ui/Button';
 import { validatePassword } from '../../../shared/utils/validators';
 import { useToast } from '../../../shared/context/ToastContext';
+import { authResetPassword } from '../../../shared/utils/apiClient';
 
 export function ForgotPasswordPage() {
   const [identifier, setIdentifier] = useState('');
@@ -40,11 +41,18 @@ export function ForgotPasswordPage() {
       return;
     }
 
-    setLoading(true);
-    await new Promise((res) => setTimeout(res, 800));
-    setLoading(false);
-    setIsSuccess(true);
-    toast.success('Your password has been successfully reset!');
+    try {
+      setLoading(true);
+      const res = await authResetPassword(identifier.trim(), newPassword);
+      setLoading(false);
+      setIsSuccess(true);
+      toast.success(res.message || 'Your password has been successfully reset!');
+    } catch (err) {
+      setLoading(false);
+      const errMsg = err.message || 'Failed to reset password. Please verify your username or email.';
+      setError(errMsg);
+      toast.error(errMsg);
+    }
   };
 
   if (isSuccess) {
